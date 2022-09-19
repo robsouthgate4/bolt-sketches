@@ -1,0 +1,27 @@
+{
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "tsconfigRootDir": "./"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    },
+    "import/resolver": {
+      "typescript": {}
+    }
+  },
+  "plugins": ["prettier", "eslint-plugin-import"],
+  "extends": [
+    "mdcs"
+  ],
+  "rules": {
+    "@typescript-eslint/indent": "off"
+  }
+}

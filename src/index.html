@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html
+	lang="en"
+	data-theme="dark"
+>
+	<head>
+		<meta
+			charset="utf-8"
+		/>
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+		/>
+		<meta
+			name="robots"
+			content="noindex"
+		/>
+
+		<title>
+			<%=
+			pageTitle
+			%>
+		</title>
+
+		<!-- og tags start -->
+
+		<%
+		Object.keys(social.og).forEach(function(prop)
+		{
+		%>
+		<%
+		if(prop
+		===
+		"image")
+		{
+		%>
+		<meta
+			property="og:<%=prop%>"
+			content="<%= siteUrl %><%= social.og[prop] %>"
+		/>
+		<%
+		}
+		else{
+		%>
+		<meta
+			property="og:<%=prop%>"
+			content="<%= social.og[prop] %>"
+		/>
+		<%
+		}
+		%>
+		<%
+		});
+		%>
+
+		<!-- og tags end -->
+
+		<!-- twitter tags start -->
+
+		<%
+		Object.keys(social.twitter).forEach(function(prop)
+		{
+		%>
+		<%
+		if(prop
+		===
+		"image")
+		{
+		%>
+		<meta
+			property="twitter:<%=prop%>"
+			content="<%= siteUrl %><%= social.twitter[prop] %>"
+		/>
+		<%
+		}
+		else{
+		%>
+		<meta
+			property="twitter:<%=prop%>"
+			content="<%= social.twitter[prop] %>"
+		/>
+		<%
+		}
+		%>
+		<%
+		});
+		%>
+
+		<!-- twitter tags end -->
+	</head>
+
+	<body>
+		<canvas
+			id="experience"
+			width="512"
+			height="512"
+		></canvas>
+	</body>
+</html>
