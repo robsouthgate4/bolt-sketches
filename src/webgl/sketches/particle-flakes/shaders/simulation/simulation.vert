@@ -141,15 +141,15 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  vel += curlNoise((pos * 0.05) + (time * 0.0001)) * 0.01;
-  vel *= 0.8;
+  vel += curlNoise((pos * 0.05) + (time * 0.0001)) * 0.03;
+  vel *= 0.6;
   pos += vel;
 
   vec3 dir = pos - vec3(0.0);
 
   if(distance(pos, vec3(0.0)) >= 7.0) {
 
-    vel -= normalize(dir) * 0.004;
+    //vel -= normalize(dir) * 0.001;
 
   }
 

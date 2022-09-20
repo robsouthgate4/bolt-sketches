@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraPersp, DrawSet, DYNAMIC_DRAW, FLOAT, GeometryBuffers, IBO, Mesh, Program, TRIANGLES, VAO, VBO } from "@bolt-webgl/core";
+import Bolt, { CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, Mesh, Program,  VBO } from "@bolt-webgl/core";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
@@ -16,11 +16,7 @@ import Orbit from "@webgl/modules/orbit";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
 import DrawState from "@/webgl/modules/draw-state";
 import ParticleDrawState from "./ParticleDrawState";
-
-interface TransformFeedbackObject {
-	updateVAO: VAO;
-	tf: WebGLTransformFeedback;
-}
+import DepthDrawState from "./DepthDrawState";
 
 export default class extends Base {
 
@@ -32,23 +28,17 @@ export default class extends Base {
 	assetsLoaded!: boolean;
 	simulationProgram!: Program;
 	simulationProgramLocations!: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initLifeTime: number; initPosition: number; };
-	particleProgramLocations!: { aPosition: number; aOffset: number; aNormal: number; aUV: number; };
 	tf1?: WebGLTransformFeedback;
 	tf2?: WebGLTransformFeedback;
-	current!: TransformFeedbackObject;
-	next!: TransformFeedbackObject;
 	instanceCount = 10000;
-	tfVelocity1?: WebGLTransformFeedback;
-	tfVelocity2?: WebGLTransformFeedback;
-	meshIBO!: IBO;
 	bolt: Bolt;
 	orbit: Orbit;
-	model = mat4.create();
 	mesh!: Mesh;
-	meshB!: Mesh;
 	drawSet!: DrawSet;
 	transformFeedback!: TransformFeedback;
 	particleDrawState!: DrawState;
+	depthDrawState!: DrawState;
+	depthFBO!: FBO;
 
 	constructor() {
 
@@ -64,6 +54,7 @@ export default class extends Base {
 		this.bolt = Bolt.getInstance();
 		this.bolt.init( this.canvas, { antialias: true, dpi: Math.min( 2, window.devicePixelRatio ), powerPreference: "high-performance" } );
 
+		this.depthFBO = new FBO( { width: 1024, height: 1024, depth: true } );
 		this.gl = this.bolt.getContext();
 
 		this.particleProgram = new Program( particlesVertexInstanced, particlesFragmentInstanced );
@@ -89,13 +80,6 @@ export default class extends Base {
 			"oldLifeTime": 2,
 			"initPosition": 3,
 			"initLifeTime": 4
-		};
-
-		this.particleProgramLocations = {
-			"aPosition": 0,
-			"aOffset": 1,
-			"aNormal": 2,
-			"aUV": 3
 		};
 
 		this.lightPosition = vec3.fromValues( 0, 10, 0 );
@@ -204,10 +188,15 @@ export default class extends Base {
 		this.resize();
 
 		this.particleDrawState = new ParticleDrawState(this.bolt)
-			.vbo(offset1VBO, 3, this.particleProgramLocations.aOffset, FLOAT, 0, 1)
+			.vbo(offset1VBO, 3, 2, FLOAT, 0, 1)
 			.viewport(0,0,this.canvas.width, this.canvas.height)
 			.clear(1,1,1,1)
 
+		this.depthDrawState = new DepthDrawState(this.bolt)
+			.vbo(offset1VBO, 3, 2, FLOAT, 0, 1)
+			.fbo(this.depthFBO)
+			.viewport(0,0,this.depthFBO.width, this.depthFBO.height)
+			.clear(1,1,1,1)
 
 
 	}
@@ -241,6 +230,7 @@ export default class extends Base {
 
 		}
 
+		//this.depthDrawState.draw();
 		this.particleDrawState.draw();
 
 
