@@ -9,10 +9,14 @@ layout(location = 3) in vec2 aUv;
 
 out vec3 Normal;
 out vec2 Uv;
+out vec4 ShadowCoord;
+out vec3 FragPosition;
 
 uniform mat4 projection;
 uniform mat4 model;
 uniform mat4 view;
+uniform mat4 lightSpaceMatrix;
+
 
 void main() {
 
@@ -22,23 +26,13 @@ void main() {
 
     vec3 pos = aPosition;
 
-    mat4 modelView = model * view;
+    vec3 transformed = pos + ( aOffset );
 
-    // modelView[0][0] = 1.;  // 0
-    // modelView[0][1] = 0.;  // 1
-    // modelView[0][2] = 0.;  // 2
+    vec4 worldPosition = model * vec4( transformed, 1.0 );
 
-    // // Column 1:
-    // modelView[1][0] = 0.;  // 4
-    // modelView[1][1] = 1.; // 5
-    // modelView[1][2] = 0.;  // 6
+    FragPosition = worldPosition.xyz;
 
-    // // Column 2:
-    // modelView[2][0] = 0.;  // 8
-    // modelView[2][1] = 0.;  // 9
-    // modelView[2][2] = 1.;  // 10
+    ShadowCoord = lightSpaceMatrix * worldPosition;
 
-    vec4 mvPosition = modelView * vec4(pos + (aOffset), 1.0);
-
-    gl_Position = projection * mvPosition;
+    gl_Position = projection * view * worldPosition;
 }

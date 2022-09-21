@@ -10,6 +10,7 @@ out vec2 Uv;
 
 uniform mat4 projection;
 uniform mat4 lightSpaceMatrix;
+uniform mat4 model;
 
 void main() {
 
@@ -19,7 +20,6 @@ void main() {
 
     vec3 pos = aPosition;
 
-    vec4 mvPosition = lightSpaceMatrix * vec4(pos + (aOffset), 1.0);
+    gl_Position = lightSpaceMatrix * model * vec4( pos + ( aOffset ), 1.0 );
 
-    gl_Position = projection * mvPosition;
 }

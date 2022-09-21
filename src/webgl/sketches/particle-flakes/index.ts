@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, Mesh, Program,  VBO } from "@bolt-webgl/core";
+import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, Mesh, Program,  VBO } from "@bolt-webgl/core";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
@@ -11,12 +11,13 @@ import simulationFragment from "./shaders/simulation/simulation.frag";
 
 import { mat4, vec3 } from "gl-matrix";
 
-import Plane from "@/webgl/modules/primitives/Plane";
 import Orbit from "@webgl/modules/orbit";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
 import DrawState from "@/webgl/modules/draw-state";
 import ParticleDrawState from "./ParticleDrawState";
 import DepthDrawState from "./DepthDrawState";
+import config from "./config";
+
 
 export default class extends Base {
 
@@ -30,7 +31,7 @@ export default class extends Base {
 	simulationProgramLocations!: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initLifeTime: number; initPosition: number; };
 	tf1?: WebGLTransformFeedback;
 	tf2?: WebGLTransformFeedback;
-	instanceCount = 10000;
+	instanceCount = config.particleCount;
 	bolt: Bolt;
 	orbit: Orbit;
 	mesh!: Mesh;
@@ -39,6 +40,8 @@ export default class extends Base {
 	particleDrawState!: DrawState;
 	depthDrawState!: DrawState;
 	depthFBO!: FBO;
+	shadowLight: CameraOrtho;
+	lightSpaceMatrix: mat4;
 
 	constructor() {
 
@@ -54,7 +57,7 @@ export default class extends Base {
 		this.bolt = Bolt.getInstance();
 		this.bolt.init( this.canvas, { antialias: true, dpi: Math.min( 2, window.devicePixelRatio ), powerPreference: "high-performance" } );
 
-		this.depthFBO = new FBO( { width: 1024, height: 1024, depth: true } );
+		this.depthFBO = new FBO( { width: 2048, height: 2048, depth: true } );
 		this.gl = this.bolt.getContext();
 
 		this.particleProgram = new Program( particlesVertexInstanced, particlesFragmentInstanced );
@@ -84,14 +87,31 @@ export default class extends Base {
 
 		this.lightPosition = vec3.fromValues( 0, 10, 0 );
 
+
 		this.camera = new CameraPersp( {
 			aspect: this.canvas.width / this.canvas.height,
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 0, 0, 30 ),
+			position: vec3.fromValues( 0, 30, 30 ),
 			target: vec3.fromValues( 0, 1, 0 ),
 		} );
+
+		const frustumSize = 120;
+
+		this.shadowLight = new CameraOrtho( {
+			left: - frustumSize,
+			right: frustumSize,
+			bottom: - frustumSize,
+			top: frustumSize,
+			near: 1,
+			far: 30,
+			position: vec3.fromValues( 0, 10, 0.1 ),
+			target: vec3.fromValues( 0, 0, 0 ),
+		} );
+
+		this.lightSpaceMatrix = mat4.create();
+		mat4.multiply( this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view );
 
 		this.orbit = new Orbit( this.camera, {
 			minElevation: -Infinity,
@@ -187,15 +207,20 @@ export default class extends Base {
 
 		this.resize();
 
-		this.particleDrawState = new ParticleDrawState(this.bolt)
-			.vbo(offset1VBO, 3, 2, FLOAT, 0, 1)
-			.viewport(0,0,this.canvas.width, this.canvas.height)
-			.clear(1,1,1,1)
 
 		this.depthDrawState = new DepthDrawState(this.bolt)
-			.vbo(offset1VBO, 3, 2, FLOAT, 0, 1)
-			.fbo(this.depthFBO)
-			.viewport(0,0,this.depthFBO.width, this.depthFBO.height)
+			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 1)
+			.setFbo(this.depthFBO)
+			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
+			.setViewport(0,0,this.depthFBO.width, this.depthFBO.height)
+			.clear(0,0,0,1)
+
+		this.particleDrawState = new ParticleDrawState(this.bolt)
+			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 1)
+			.uniformTexture("mapDepth", this.depthFBO.depthTexture!)
+			.uniformFloat("shadowStrength", 0.5)
+			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
+			.setViewport(0,0,this.canvas.width, this.canvas.height)
 			.clear(1,1,1,1)
 
 
@@ -225,13 +250,21 @@ export default class extends Base {
 
 			this.simulationProgram.activate();
 			this.simulationProgram.setFloat( "time", elapsed );
-			//this.transformFeedback.compute();
+			this.transformFeedback.compute();
 
 
 		}
 
-		//this.depthDrawState.draw();
-		this.particleDrawState.draw();
+		this.shadowLight.transform.positionX = Math.sin(elapsed) * 10;
+		this.shadowLight.update();
+
+		mat4.multiply( this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view );
+
+		this.depthDrawState
+		.draw()
+
+		this.particleDrawState
+		.draw();
 
 
 	}

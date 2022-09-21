@@ -141,23 +141,23 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  vel += curlNoise((pos * 0.05) + (time * 0.0001)) * 0.03;
-  vel *= 0.6;
+  vel += curlNoise((pos * 0.05) + (time * 0.0001)) * 0.01;
+  vel *= 0.8;
   pos += vel;
 
   vec3 dir = pos - vec3(0.0);
 
   if(distance(pos, vec3(0.0)) >= 7.0) {
 
-    //vel -= normalize(dir) * 0.001;
+    vel -= normalize(dir) * 0.001;
 
   }
 
   float life = oldLifeTime;
 
-  life -= 0.1;
+  life -= 0.03;
 
-  if(life <= 0.00001) {
+  if(life < 0.00001) {
 
     pos = initPosition;
     life = initLife;

@@ -1,4 +1,4 @@
-import Bolt, { FBO, Mesh, Program, TextureCube, Texture2D, Viewport, DrawSet, VBO, AttribPointer, TypedArray } from "@bolt-webgl/core";
+import Bolt, { FBO, Mesh, Program, TextureCube, Texture2D, Viewport, DrawSet, VBO, AttribPointer, TypedArray, NONE } from "@bolt-webgl/core";
 import { mat2, mat3, mat4, vec2, vec3, vec4 } from "gl-matrix";
 
 export default class DrawState {
@@ -6,10 +6,12 @@ export default class DrawState {
 	private _bolt: Bolt;
 	private _viewport: Viewport = { offsetX: 0, offsetY: 0, width: 0, height: 0 };
 	private _fbo?: FBO;
-	private _drawSet?: DrawSet;
+	private _drawSet?: DrawSet | undefined;
+
 
 	protected _instanceCount!: number;
 	private _clearColor!: { r: number; g: number; b: number; a: number; };
+	private _cullFace = NONE;
 
 	constructor(bolt: Bolt) {
 
@@ -17,7 +19,7 @@ export default class DrawState {
 
 	}
 
-	drawSet(drawSet: DrawSet) {
+	setDrawSet(drawSet: DrawSet) {
 
 		this._drawSet = drawSet;
 
@@ -25,8 +27,18 @@ export default class DrawState {
 
 	}
 
+	uniformFloat(uniform: string, value: number) {
+
+		this._drawSet?.program.activate();
+		this._drawSet && this._drawSet.program.setFloat(uniform, value);
+
+		return this;
+
+	}
+
 	uniformVector2(uniform: string, value: vec2) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setVector2(uniform, value);
 
 		return this;
@@ -35,6 +47,7 @@ export default class DrawState {
 
 	uniformVector3(uniform: string, value: vec3) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setVector3(uniform, value);
 
 		return this;
@@ -43,6 +56,7 @@ export default class DrawState {
 
 	uniformVector4(uniform: string, value: vec4) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setVector4(uniform, value);
 
 		return this;
@@ -51,6 +65,7 @@ export default class DrawState {
 
 	uniformMatrix3(uniform: string, value: mat3) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setMatrix3(uniform, value);
 
 		return this;
@@ -59,6 +74,7 @@ export default class DrawState {
 
 	uniformMatrix4(uniform: string, value: mat4) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setMatrix4(uniform, value);
 
 		return this;
@@ -67,6 +83,7 @@ export default class DrawState {
 
 	uniformInt(uniform: string, value: number) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setInt(uniform, value);
 
 		return this;
@@ -75,6 +92,7 @@ export default class DrawState {
 
 	uniformBoolean(uniform: string, value: number) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setBool(uniform, value);
 
 		return this;
@@ -83,13 +101,14 @@ export default class DrawState {
 
 	uniformTexture(uniform: string, texture: TextureCube | Texture2D) {
 
+		this._drawSet?.program.activate();
 		this._drawSet && this._drawSet.program.setTexture(uniform, texture);
 
 		return this;
 
 	}
 
-	attribute(buffer: TypedArray, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
+	setAttribute(buffer: TypedArray, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
 
 		if(this._drawSet) {
 
@@ -105,7 +124,7 @@ export default class DrawState {
 
 	}
 
-	instanceCount(count: number) {
+	setInstanceCount(count: number) {
 
 		this._instanceCount = count;
 
@@ -114,11 +133,11 @@ export default class DrawState {
 	}
 
 
-	vbo(vbo: VBO, size: number, layoutID: number | AttribPointer, type: number, offset: number, stride: number) {
+	setVbo(vbo: VBO, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
 
 		if(this._drawSet) {
 
-			this._drawSet.mesh.setVBO(vbo, size, layoutID, type, offset, stride);
+			this._drawSet.mesh.setVBO(vbo, size, layoutID, type, offset, divisor);
 
 		}else {
 
@@ -130,7 +149,7 @@ export default class DrawState {
 
 	}
 
-	fbo(fbo: FBO) {
+	setFbo(fbo: FBO) {
 
 		this._fbo = fbo;
 
@@ -146,7 +165,15 @@ export default class DrawState {
 
 	}
 
-	viewport(offsetX: number, offsetY: number, width: number, height: number) {
+	setCullFace(face: number) {
+
+		this._cullFace = face;
+
+		return this;
+
+	}
+
+	setViewport(offsetX: number, offsetY: number, width: number, height: number) {
 
 		this._viewport = { offsetX, offsetY, width, height };
 
@@ -166,6 +193,13 @@ export default class DrawState {
 
 		this._clearColor && this._bolt.clear(this._clearColor.r, this._clearColor.g, this._clearColor.b, this._clearColor.a);
 
+		if(this._cullFace !== NONE){
+
+			this._bolt.enableCullFace();
+			this._bolt.cullFace(this._cullFace);
+
+		}
+
 		if(this._drawSet) {
 
 			this._bolt.draw(this._drawSet);
@@ -177,6 +211,23 @@ export default class DrawState {
 			this._fbo.unbind();
 
 		}
+
+		if(this._cullFace !== NONE){
+			this._bolt.disableCullFace();
+		}
+
+		return this;
+
+	}
+
+	public get drawSet(): DrawSet | undefined {
+
+		return this._drawSet;
+
+	}
+	public set drawSet(value: DrawSet | undefined) {
+
+		this._drawSet = value;
 
 	}
 

@@ -2,6 +2,7 @@ import DrawState from "@/webgl/modules/draw-state";
 import Bolt, {  DrawSet, GeometryBuffers, Mesh, NONE, Program } from "@bolt-webgl/core"
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
+import config from "./config";
 
 export default class ParticleDrawState extends DrawState {
 
@@ -9,8 +10,8 @@ export default class ParticleDrawState extends DrawState {
 
 		super(Bolt.getInstance());
 
-		const scaleX = 0.3;
-		const scaleZ = 0.5;
+		const scaleX = 0.1 * config.particleScale;
+		const scaleZ = 0.2 * config.particleScale;
 
 		const triangle: GeometryBuffers = {
 			positions: [
@@ -30,15 +31,13 @@ export default class ParticleDrawState extends DrawState {
 
 		const mesh = new Mesh( triangle, {
 			instanced: true,
-			instanceCount: 10000,
+			instanceCount: config.particleCount,
 		})
 
 		const particleProgram = new Program( particlesVertexInstanced, particlesFragmentInstanced );
-		particleProgram.cullFace = NONE;
-
 		const drawSet = new DrawSet( mesh, particleProgram );
 
-		this.drawSet( drawSet );
+		this.setDrawSet( drawSet );
 
 	}
 
