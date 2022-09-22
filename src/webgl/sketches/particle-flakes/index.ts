@@ -31,8 +31,6 @@ export default class extends Base {
 	assetsLoaded!: boolean;
 	simulationProgram!: Program;
 	simulationProgramLocations!: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initLifeTime: number; initPosition: number; };
-	tf1?: WebGLTransformFeedback;
-	tf2?: WebGLTransformFeedback;
 	instanceCount = config.particleCount;
 	bolt: Bolt;
 	orbit: Orbit;
@@ -283,11 +281,9 @@ export default class extends Base {
 		this.simulationProgram.setFloat("time", elapsed);
 		this.transformFeedback.compute();
 
-		this.depthDrawState
-			.draw()
+		this.depthDrawState.draw()
 
-		this.particleDrawState
-			.draw();
+		this.particleDrawState.draw();
 
 
 	}
