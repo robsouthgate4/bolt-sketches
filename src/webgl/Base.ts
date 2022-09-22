@@ -89,7 +89,6 @@ export default abstract class Base {
 
 	run( timestamp: number ) {
 
-
 		const { DEBUG_FPS } = glSettings;
 
 		if ( DEBUG_FPS ) this.stats?.begin();

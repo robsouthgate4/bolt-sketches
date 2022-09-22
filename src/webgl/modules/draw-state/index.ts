@@ -3,13 +3,13 @@ import { mat2, mat3, mat4, vec2, vec3, vec4 } from "gl-matrix";
 
 export default class DrawState {
 
-	private _bolt: Bolt;
-	private _viewport: Viewport = { offsetX: 0, offsetY: 0, width: 0, height: 0 };
-	private _fbo?: FBO;
-	private _drawSet?: DrawSet | undefined;
-
-
+	protected _bolt: Bolt;
+	protected _viewport: Viewport = { offsetX: 0, offsetY: 0, width: 0, height: 0 };
+	protected _fbo?: FBO;
+	protected _drawSet?: DrawSet | undefined;
 	protected _instanceCount!: number;
+	protected _mesh?: Mesh;
+
 	private _clearColor!: { r: number; g: number; b: number; a: number; };
 	private _cullFace = NONE;
 
@@ -17,6 +17,13 @@ export default class DrawState {
 
 		this._bolt = bolt;
 
+	}
+
+	setMesh(mesh: Mesh) {
+
+		this._mesh = mesh;
+
+		return this;
 	}
 
 	setDrawSet(drawSet: DrawSet) {
@@ -110,7 +117,7 @@ export default class DrawState {
 
 	setAttribute(buffer: TypedArray, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
 
-		if(this._drawSet) {
+		if (this._drawSet) {
 
 			this._drawSet.mesh.setAttribute(buffer, size, layoutID, type, offset, divisor);
 
@@ -135,11 +142,11 @@ export default class DrawState {
 
 	setVbo(vbo: VBO, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
 
-		if(this._drawSet) {
+		if (this._drawSet) {
 
 			this._drawSet.mesh.setVBO(vbo, size, layoutID, type, offset, divisor);
 
-		}else {
+		} else {
 
 			console.error("No draw set provided");
 
@@ -183,7 +190,7 @@ export default class DrawState {
 
 	draw() {
 
-		if(this._fbo) {
+		if (this._fbo) {
 
 			this._fbo.bind();
 
@@ -193,26 +200,26 @@ export default class DrawState {
 
 		this._clearColor && this._bolt.clear(this._clearColor.r, this._clearColor.g, this._clearColor.b, this._clearColor.a);
 
-		if(this._cullFace !== NONE){
+		if (this._cullFace !== NONE) {
 
 			this._bolt.enableCullFace();
 			this._bolt.cullFace(this._cullFace);
 
 		}
 
-		if(this._drawSet) {
+		if (this._drawSet) {
 
 			this._bolt.draw(this._drawSet);
 
 		}
 
-		if(this._fbo) {
+		if (this._fbo) {
 
 			this._fbo.unbind();
 
 		}
 
-		if(this._cullFace !== NONE){
+		if (this._cullFace !== NONE) {
 			this._bolt.disableCullFace();
 		}
 

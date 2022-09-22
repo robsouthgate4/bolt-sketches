@@ -141,15 +141,21 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  vel += curlNoise((pos * 0.05) + (time * 0.0001)) * 0.01;
+  vec3 attractorPosition = vec3( sin( time ) * 70.0, 0.0, cos( time ) * 70.0);
+
+  vec3 attractorForce = normalize( attractorPosition - pos );
+
+  vel += attractorForce * 0.01;
+  vel += curlNoise((pos * 0.04) + (time * 0.0001)) * 0.02;
   vel *= 0.8;
   pos += vel;
 
-  vec3 dir = pos - vec3(0.0);
 
-  if(distance(pos, vec3(0.0)) >= 7.0) {
+  vec3 centerDirection = pos - vec3(0.0);
 
-    vel -= normalize(dir) * 0.001;
+  if(distance(pos, vec3(0.0)) >= 4.0) {
+
+    vel -= normalize(centerDirection) * 0.001;
 
   }
 

@@ -50,7 +50,7 @@ void main() {
 
    float shadow = getShadow( ShadowCoord, normalize( lightDirection ) );
 
-   vec3 color = vec3( 0.7 );
+   vec3 color = vec3( 1.0 );
 
    FragColor = vec4( color * ( 1.0 - ( shadow * shadowStrength ) ), 1.0);
 }
