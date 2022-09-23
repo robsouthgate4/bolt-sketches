@@ -141,7 +141,7 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  vec3 attractorPosition = vec3( sin( time ) * 70.0, 0.0, cos( time ) * 70.0);
+  vec3 attractorPosition = vec3( sin( time ) * 70.0, 5., cos( time ) * 70.0);
 
   vec3 attractorForce = normalize( attractorPosition - pos );
 

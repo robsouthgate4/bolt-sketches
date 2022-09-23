@@ -1,4 +1,4 @@
 export default {
-	particleCount: 5000,
+	particleCount: 10000,
 	particleScale: 0.3
 }

@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, Mesh, Program, VBO } from "@bolt-webgl/core";
+import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, Mesh, Program, Texture2D, VBO } from "@bolt-webgl/core";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
@@ -135,6 +135,14 @@ export default class extends Base {
 		await gltfLoader.load("/static/models/gltf/examples/disk-particle/scene.glb");
 		const diskMesh = gltfLoader.drawSetsFlattened[0].mesh;
 
+		const matcap = new Texture2D({
+			imagePath: "/static/textures/matcap/matcap-ice.jpeg",
+			wrapS: this.gl.CLAMP_TO_EDGE,
+			wrapT: this.gl.CLAMP_TO_EDGE,
+		});
+
+		await matcap.load();
+
 		this.assetsLoaded = true;
 
 		const offsets: number[] = [];
@@ -252,8 +260,9 @@ export default class extends Base {
 			.uniformFloat("shadowStrength", 0.6)
 			.uniformFloat("particleScale", config.particleScale)
 			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
+			.uniformTexture("mapMatcap", matcap)
 			.setViewport(0, 0, this.canvas.width, this.canvas.height)
-			.clear(0.9, 0.9, 0.9, 1)
+			.clear(0.9, 0.92, 0.9, 1)
 
 
 	}
@@ -282,7 +291,6 @@ export default class extends Base {
 		this.transformFeedback.compute();
 
 		this.depthDrawState.draw()
-
 		this.particleDrawState.draw();
 
 
