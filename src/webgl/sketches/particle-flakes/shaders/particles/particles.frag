@@ -11,8 +11,10 @@ in vec3 FragPosition;
 in vec3 Eye;
 
 uniform sampler2D mapDepth;
-uniform sampler2D mapMatcap;
+uniform sampler2D mapMatcapLight;
+uniform sampler2D mapMatcapDark;
 uniform float shadowStrength;
+uniform float colorMode;
 uniform vec3 lightPosition;
 
 float getShadow( vec4 shadowCoord, vec3 lightDirection )
@@ -61,7 +63,10 @@ void main() {
 
    vec3  lightDirection = ( lightPosition - FragPosition );
    float shadow         = getShadow( ShadowCoord, normalize( lightDirection ) );
-   vec3  color          = texture( mapMatcap, getReflection( Eye, Normal ) ).rgb;
+   vec3  colorLight     = texture( mapMatcapLight, getReflection( Eye, Normal ) ).rgb * 1.8;
+   vec3  colorDark      = texture( mapMatcapDark, getReflection( Eye, Normal ) ).rgb;
+
+   vec3 color = mix( colorLight, colorDark, colorMode );
 
    FragColor = vec4( color * ( 1.0 - ( shadow * shadowStrength ) ), 1.0);
 

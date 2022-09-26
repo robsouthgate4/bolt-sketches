@@ -19,33 +19,39 @@ import TransformFeedback from "@/webgl/modules/transform-feedback";
 import DrawState from "@/webgl/modules/draw-state";
 import config from "./config";
 import GLTFLoader from "@/webgl/modules/gltf-loader";
-
+import { GUI } from "lil-gui"
+import EaseNumber from "@/webgl/helpers/EaseNumber";
 
 export default class extends Base {
 
 	canvas: HTMLCanvasElement;
 	gl: WebGL2RenderingContext;
 	particleProgram!: Program;
-	lightPosition: vec3;
-	camera: CameraPersp;
+	camera!: CameraPersp;
 	assetsLoaded!: boolean;
 	simulationProgram!: Program;
 	simulationProgramLocations!: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initLifeTime: number; initPosition: number; };
 	instanceCount = config.particleCount;
 	bolt: Bolt;
-	orbit: Orbit;
+	orbit!: Orbit;
 	mesh!: Mesh;
 	drawSet!: DrawSet;
 	transformFeedback!: TransformFeedback;
 	particleDrawState!: DrawState;
 	depthDrawState!: DrawState;
 	depthFBO!: FBO;
-	shadowLight: CameraOrtho;
-	lightSpaceMatrix: mat4;
+	shadowLight!: CameraOrtho;
+	lightSpaceMatrix = mat4.create();
+	config: any;
+	maptcapDark!: Texture2D;
+	maptcapLight!: Texture2D;
+	colorEase = new EaseNumber(config.colorMode === "light" ? 0 : 1, 0.02);
 
 	constructor() {
 
 		super();
+
+		this.config = config;
 
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
@@ -54,46 +60,28 @@ export default class extends Base {
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 
+		// initialize bolt
 		this.bolt = Bolt.getInstance();
 		this.bolt.init(this.canvas, { antialias: true, dpi: Math.min(2, window.devicePixelRatio), powerPreference: "high-performance" });
 
-		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
 		this.gl = this.bolt.getContext();
 
-		this.particleProgram = new Program(particlesVertexInstanced, particlesFragmentInstanced);
+		this.initScene();
+		this.initSketch();
+		this.initGUI();
 
-		const transformFeedbackVaryings = [
-			"newPosition",
-			"newVelocity",
-			"newLifeTime"
-		];
 
-		this.simulationProgram = new Program(simulationVertex, simulationFragment,
-			{
-				transformFeedbackVaryings
-			});
+	}
 
-		this.simulationProgram.activate();
-		this.simulationProgram.setFloat("lifeTime", 4);
-		this.simulationProgram.setFloat("time", 0);
-
-		this.simulationProgramLocations = {
-			"oldPosition": 0,
-			"oldVelocity": 1,
-			"oldLifeTime": 2,
-			"initPosition": 3,
-			"initLifeTime": 4
-		};
-
-		this.lightPosition = vec3.fromValues(0, 10, 0);
-
+	// construct the scene
+	initScene() {
 
 		this.camera = new CameraPersp({
 			aspect: this.canvas.width / this.canvas.height,
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues(0, 30, 30),
+			position: vec3.fromValues(0, 30, 20),
 			target: vec3.fromValues(0, 1, 0),
 		});
 
@@ -110,38 +98,72 @@ export default class extends Base {
 			target: vec3.fromValues(0, 0, 0),
 		});
 
-		this.lightSpaceMatrix = mat4.create();
 		mat4.multiply(this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view);
 
 		this.orbit = new Orbit(this.camera, {
 			minElevation: -Infinity,
 			maxElevation: Infinity,
+			ease: 0.06,
 		});
 
 		this.bolt.setCamera(this.camera);
 		this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
 		this.bolt.enableDepth();
 
-		this.transformFeedback = new TransformFeedback({ bolt: this.bolt, count: this.instanceCount });
-
-		this.init();
-
-
 	}
 
-	async init() {
+	// construct the sketch
+	async initSketch() {
+
+		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
+
+		this.particleProgram = new Program(particlesVertexInstanced, particlesFragmentInstanced);
+
+		const transformFeedbackVaryings = [
+			"newPosition",
+			"newVelocity",
+			"newLifeTime"
+		];
+
+		this.simulationProgram = new Program(
+			simulationVertex,
+			simulationFragment,
+			{
+				transformFeedbackVaryings
+			});
+
+		this.simulationProgram.activate();
+		this.simulationProgram.setFloat("lifeTime", 4);
+		this.simulationProgram.setFloat("time", 0);
+
+		this.simulationProgramLocations = {
+			"oldPosition": 0,
+			"oldVelocity": 1,
+			"oldLifeTime": 2,
+			"initPosition": 3,
+			"initLifeTime": 4
+		};
+
+		this.transformFeedback = new TransformFeedback({ bolt: this.bolt, count: this.instanceCount });
 
 		const gltfLoader = new GLTFLoader(this.bolt, true);
 		await gltfLoader.load("/static/models/gltf/examples/disk-particle/scene.glb");
 		const diskMesh = gltfLoader.drawSetsFlattened[0].mesh;
 
-		const matcap = new Texture2D({
-			imagePath: "/static/textures/matcap/matcap-ice.jpeg",
+		this.maptcapDark = new Texture2D({
+			imagePath: "/static/textures/matcap/matcap-black.jpeg",
 			wrapS: this.gl.CLAMP_TO_EDGE,
 			wrapT: this.gl.CLAMP_TO_EDGE,
 		});
 
-		await matcap.load();
+		this.maptcapLight = new Texture2D({
+			imagePath: "/static/textures/matcap/matcap-reflective.jpeg",
+			wrapS: this.gl.CLAMP_TO_EDGE,
+			wrapT: this.gl.CLAMP_TO_EDGE,
+		});
+
+		await this.maptcapDark.load();
+		await this.maptcapLight.load();
 
 		this.assetsLoaded = true;
 
@@ -238,6 +260,10 @@ export default class extends Base {
 		}), dp);
 
 
+		const bg = this.config[this.config.colorMode].backgroundColor;
+
+		// prepare draw states
+
 		this.depthDrawState = new DrawState(this.bolt)
 			.setDrawSet(depthDrawSet)
 			.setVbo(velocity1VBO, 3, 6, FLOAT, 0, 1)
@@ -245,7 +271,7 @@ export default class extends Base {
 			.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 1)
 			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 1)
 			.setFbo(this.depthFBO)
-			.uniformFloat("particleScale", config.particleScale)
+			.uniformFloat("particleScale", this.config.particleScale)
 			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
 			.setViewport(0, 0, this.depthFBO.width, this.depthFBO.height)
 			.clear(0, 0, 0, 1)
@@ -257,13 +283,43 @@ export default class extends Base {
 			.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 1)
 			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 1)
 			.uniformTexture("mapDepth", this.depthFBO.depthTexture!)
-			.uniformFloat("shadowStrength", 0.6)
-			.uniformFloat("particleScale", config.particleScale)
+			.uniformFloat("shadowStrength", this.config.shadowStrength)
+			.uniformFloat("particleScale", this.config.particleScale)
+			.uniformFloat("colorMode", this.config.colorMode === "light" ? 0 : 1)
 			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
-			.uniformTexture("mapMatcap", matcap)
+			.uniformTexture("mapMatcapLight", this.maptcapLight)
+			.uniformTexture("mapMatcapDark", this.maptcapDark)
 			.setViewport(0, 0, this.canvas.width, this.canvas.height)
-			.clear(0.9, 0.92, 0.9, 1)
+			.clear(bg[0], bg[1], bg[2], bg[3])
 
+
+	}
+
+	initGUI() {
+
+		const gui = new GUI();
+
+		const folder = gui;
+
+		folder.add(this.config, "particleCount", [5000, 10000, 20000, 30000]).onChange((valu: number) => { });
+
+		folder.add(this.config, "particleScale", 0.1, 1).step(0.01).onChange((value: number) => {
+			this.particleDrawState.uniformFloat("particleScale", value);
+		});
+
+		folder.add(this.config, "particleSpeed", 0.1, 10).step(0.1);
+		folder.add(this.config, "particleLifeTime", 0.1, 10).step(0.1);
+
+		folder.add(this.config, "shadowStrength", 0.1, 1).step(0.1).onChange((value: number) => {
+			this.particleDrawState.uniformFloat("shadowStrength", value);
+		});
+
+		folder.add(this.config, "colorMode", ["light", "dark"]).onChange((value: string) => {
+			this.config.colorMode = value;
+			this.colorEase.value = value === "light" ? 0 : 1;
+		});
+
+		folder.open();
 
 	}
 
@@ -291,7 +347,19 @@ export default class extends Base {
 		this.transformFeedback.compute();
 
 		this.depthDrawState.draw()
-		this.particleDrawState.draw();
+		console.log(this.config)
+
+		const bgLight = this.config.light.backgroundColor;
+		const bgDark = this.config.dark.backgroundColor;
+
+		this.particleDrawState
+			.uniformFloat("colorMode", this.colorEase.value)
+			.clear(
+				bgLight[0] * (1 - this.colorEase.value) + bgDark[0] * (this.colorEase.value),
+				bgLight[1] * (1 - this.colorEase.value) + bgDark[1] * (this.colorEase.value),
+				bgLight[2] * (1 - this.colorEase.value) + bgDark[2] * (this.colorEase.value),
+				bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
+			.draw()
 
 
 	}
