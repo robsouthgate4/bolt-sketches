@@ -29,6 +29,7 @@ import Sphere from "@/webgl/modules/primitives/Sphere";
 
 import normalVertexShader from "./shaders/normal/normal.vert";
 import normalFragmentShader from "./shaders/normal/normal.frag";
+import EaseVec3 from "@/webgl/helpers/EaseVector3";
 
 export default class extends Base {
 
@@ -58,7 +59,9 @@ export default class extends Base {
 	eventListeners = EventListeners.getInstance();
 	ray: Ray;
 	repellorDebug: DrawSet;
+	repellorTarget = new EaseVec3(0, 0, 0, 0.3);
 	repellorPosition = vec3.create();
+	repellorPositinPrevious = vec3.create();
 
 	constructor() {
 
@@ -106,8 +109,10 @@ export default class extends Base {
 			vec3.multiply(rayScaled, this.ray.direction, vec3.fromValues(scale, scale, scale));
 			vec3.add(rayEnd, rayEnd, rayScaled);
 
-			this.repellorDebug.transform.position = rayEnd;
-			this.repellorPosition = rayEnd;
+
+			this.repellorTarget.x = rayEnd[0];
+			this.repellorTarget.y = rayEnd[1];
+			this.repellorTarget.z = rayEnd[2];
 
 		});
 
@@ -176,6 +181,11 @@ export default class extends Base {
 
 		this.simulationProgram.activate();
 		this.simulationProgram.setFloat("lifeTime", 4);
+		this.simulationProgram.setFloat("particleLifeRate", this.config.particleLifeRate);
+		this.simulationProgram.setFloat("particleLifeTime", this.config.particleLifeTime);
+		this.simulationProgram.setFloat("particleSpeed", this.config.particleSpeed);
+		this.simulationProgram.setFloat("repellorStrength", this.config.repellorStrength);
+		this.simulationProgram.setFloat("curlStrength", this.config.curlStrength);
 		this.simulationProgram.setFloat("time", 0);
 
 		this.simulationProgramLocations = {
@@ -349,8 +359,20 @@ export default class extends Base {
 			this.particleDrawState.uniformFloat("particleScale", value);
 		});
 
-		folder.add(this.config, "particleSpeed", 0.1, 10).step(0.1);
-		folder.add(this.config, "particleLifeTime", 0.1, 10).step(0.1);
+		folder.add(this.config, "particleSpeed", 0.1, 2).step(0.1).onChange((value: number) => {
+			this.simulationProgram.activate();
+			this.simulationProgram.setFloat("particleSpeed", value);
+		});
+
+		folder.add(this.config, "particleLifeRate", 0.01, 0.08).step(0.01).onChange((value: number) => {
+			this.simulationProgram.activate();
+			this.simulationProgram.setFloat("particleLifeRate", value);
+		});
+
+		folder.add(this.config, "curlStrength", 1, 5).step(0.1).onChange((value: number) => {
+			this.simulationProgram.activate();
+			this.simulationProgram.setFloat("curlStrength", value);
+		});
 
 		folder.add(this.config, "shadowStrength", 0.1, 1).step(0.1).onChange((value: number) => {
 			this.particleDrawState.uniformFloat("shadowStrength", value);
@@ -383,10 +405,15 @@ export default class extends Base {
 		if (!this.assetsLoaded) return;
 
 		this.orbit.update();
+		vec3.set(this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z);
+
+		let d = vec3.distance(this.repellorPosition, this.repellorPositinPrevious);
+		d = Math.min(d, 1) * 10;
 
 		this.simulationProgram.activate();
 		this.simulationProgram.setFloat("time", elapsed);
 		this.simulationProgram.setVector3("repellorPosition", this.repellorPosition);
+		this.simulationProgram.setFloat("repellorScale", d);
 		this.transformFeedback.compute();
 
 		this.depthDrawState.draw()
@@ -403,7 +430,7 @@ export default class extends Base {
 				bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
 			.draw()
 
-		this.bolt.draw(this.repellorDebug);
+		vec3.copy(this.repellorPositinPrevious, this.repellorPosition);
 
 	}
 

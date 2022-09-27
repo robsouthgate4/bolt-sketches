@@ -15,6 +15,11 @@ out float newLifeTime;
 
 uniform float time;
 uniform vec3 repellorPosition;
+uniform float repellorScale;
+uniform float repellorStrength;
+uniform float particleLifeRate;
+uniform float particleSpeed;
+uniform float curlStrength;
 
 vec3 mod289(vec3 x) {
   return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -142,28 +147,27 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  vec3 attractorPosition = vec3( sin( time ) * 70.0, 5., cos( time ) * 70.0);
+  vec3 attractorPosition = vec3( sin( time ) * 90.0, 0., cos( time ) * 90.0);
 
   vec3 attractorForce = normalize( attractorPosition - pos );
 
   vel += attractorForce * 0.01;
-  vel += curlNoise((pos * 0.04) + (time * 0.0001)) * 0.02;
+  vel += curlNoise((pos * ( 0.04 * curlStrength ) ) + (time * 0.01)) * 0.02;
   vel *= 0.8;
-  pos += vel;
+  pos += vel * particleSpeed;
 
   float repellor = distance( pos, repellorPosition );
 
-  if(distance( pos, repellorPosition ) < 7.0) {
+  if(distance( pos, repellorPosition ) <= repellorScale) {
 
     vec3 repellorDirection = pos - repellorPosition;
-    vel += normalize(repellorDirection) * 0.03;
+    vel += normalize(repellorDirection) * repellorStrength;
 
   }
 
-
   vec3 centerDirection = pos - vec3(0.0);
 
-  if(distance(pos, vec3(0.0)) >= 4.0) {
+  if(distance(pos, vec3(0.0)) >= 5.0) {
 
     vel -= normalize(centerDirection) * 0.001;
 
@@ -171,7 +175,7 @@ void main() {
 
   float life = oldLifeTime;
 
-  life -= 0.03;
+  life -= particleLifeRate;
 
   if(life < 0.00001) {
 
