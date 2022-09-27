@@ -14,6 +14,7 @@ out vec3 newVelocity;
 out float newLifeTime;
 
 uniform float time;
+uniform vec3 repellorPosition;
 
 vec3 mod289(vec3 x) {
   return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -149,6 +150,15 @@ void main() {
   vel += curlNoise((pos * 0.04) + (time * 0.0001)) * 0.02;
   vel *= 0.8;
   pos += vel;
+
+  float repellor = distance( pos, repellorPosition );
+
+  if(distance( pos, repellorPosition ) < 7.0) {
+
+    vec3 repellorDirection = pos - repellorPosition;
+    vel += normalize(repellorDirection) * 0.03;
+
+  }
 
 
   vec3 centerDirection = pos - vec3(0.0);

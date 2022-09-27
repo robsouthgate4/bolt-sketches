@@ -12,7 +12,7 @@ import depthFragmentInstanced from "./shaders/depth/depth.frag";
 import simulationVertex from "./shaders/simulation/simulation.vert";
 import simulationFragment from "./shaders/simulation/simulation.frag";
 
-import { mat4, vec3 } from "gl-matrix";
+import { mat4, vec3, vec4 } from "gl-matrix";
 
 import Orbit from "@webgl/modules/orbit";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
@@ -21,6 +21,14 @@ import config from "./config";
 import GLTFLoader from "@/webgl/modules/gltf-loader";
 import { GUI } from "lil-gui"
 import EaseNumber from "@/webgl/helpers/EaseNumber";
+import Raycast from "@/webgl/modules/raycast";
+import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
+import Ray from "@/webgl/modules/raycast/Ray";
+import { GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
+import Sphere from "@/webgl/modules/primitives/Sphere";
+
+import normalVertexShader from "./shaders/normal/normal.vert";
+import normalFragmentShader from "./shaders/normal/normal.frag";
 
 export default class extends Base {
 
@@ -46,6 +54,11 @@ export default class extends Base {
 	maptcapDark!: Texture2D;
 	maptcapLight!: Texture2D;
 	colorEase = new EaseNumber(config.colorMode === "light" ? 0 : 1, 0.02);
+	raycaster = new Raycast();
+	eventListeners = EventListeners.getInstance();
+	ray: Ray;
+	repellorDebug: DrawSet;
+	repellorPosition = vec3.create();
 
 	constructor() {
 
@@ -66,10 +79,37 @@ export default class extends Base {
 
 		this.gl = this.bolt.getContext();
 
+		this.repellorDebug = new DrawSet(
+			new Mesh(new Sphere()), new Program(normalVertexShader, normalFragmentShader)
+		);
+
 		this.initScene();
 		this.initSketch();
 		this.initGUI();
+		this.initListeners();
 
+	}
+
+	initListeners() {
+
+		this.eventListeners.listen(GL_TOUCH_MOVE_TOPIC, (e: any) => {
+
+			const { normalized } = e.detail;
+
+			const scale = vec3.distance(this.camera.position, this.camera.target);
+
+			this.ray = this.raycaster.generateRayFromCamera(normalized.x, normalized.y, this.camera);
+
+			const rayEnd = vec3.clone(this.ray.origin);
+			const rayScaled = vec3.create();
+
+			vec3.multiply(rayScaled, this.ray.direction, vec3.fromValues(scale, scale, scale));
+			vec3.add(rayEnd, rayEnd, rayScaled);
+
+			this.repellorDebug.transform.position = rayEnd;
+			this.repellorPosition = rayEnd;
+
+		});
 
 	}
 
@@ -114,6 +154,8 @@ export default class extends Base {
 
 	// construct the sketch
 	async initSketch() {
+
+		//const ray = this.raycaster.generateRayFromCamera(this.camera);
 
 		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
 
@@ -344,10 +386,10 @@ export default class extends Base {
 
 		this.simulationProgram.activate();
 		this.simulationProgram.setFloat("time", elapsed);
+		this.simulationProgram.setVector3("repellorPosition", this.repellorPosition);
 		this.transformFeedback.compute();
 
 		this.depthDrawState.draw()
-		console.log(this.config)
 
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
@@ -361,6 +403,7 @@ export default class extends Base {
 				bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
 			.draw()
 
+		this.bolt.draw(this.repellorDebug);
 
 	}
 
