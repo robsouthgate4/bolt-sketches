@@ -137,7 +137,7 @@ export default class Orbit {
 
 		if (this._shiftKeyDown) return;
 
-		const direction = Math.sign(ev.detail.deltaY);
+		const direction = Math.sign(-ev.detail.deltaY);
 
 		this._sphericalTarget.radius += (direction * this._zoomSpeed);
 
