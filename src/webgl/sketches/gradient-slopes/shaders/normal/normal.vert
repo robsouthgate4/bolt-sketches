@@ -8,6 +8,13 @@ layout(location = 2) in vec2 aUv;
 
 out vec3 Normal;
 
+out float NoiseOne;
+out float NoiseTwo;
+out float NoiseThree;
+out vec2 Uv;
+out vec3 MixedColor;
+out float M;
+
 uniform mat4 projection;
 uniform mat4 model;
 uniform mat4 view;
@@ -104,17 +111,39 @@ float snoise(vec4 v){
                + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;
 
 }
+
+float linearParabola(float x) {
+    return 1.0 - abs(x * 2.0 - 1.0);
+}
+
+
 void main() {
+
+  Uv = aUv;
 
   Normal = ( normal * vec4( aNormal, 0.0 ) ).xyz;
 
-  float n = snoise( vec4( aPosition, time * 0.1 ) );
+  float n  = snoise( vec4( (aPosition * vec3( 0.8, 1.0, 1.5 )  ) * vec3( 1.0 ), time * 0.2 ) ) * 0.5 + 0.5;
+  float n2 = snoise( vec4( ((aPosition * 0.8) * vec3( 3.0, 1.0, 1.3 ) ) * vec3( 0.5 ), time * 0.4 ) );
+  float n3 = snoise( vec4( ((aPosition * 0.3) * vec3( 3.0, 1.0, 1.0 ) ) * vec3( 2.0 ), time * 0.4 ) );
+
+  MixedColor = vec3( 54.,	219.,	245.	 ) / 255.;
+
+  vec3 color2     = pow( vec3( 54.,	219.,	245.	 ) / 255., vec3( 2.0 ) );
+
+  vec3 color3     = vec3( 247.,	241.,	229.	 ) / 255.;
+
+  MixedColor = mix( MixedColor, color2, min( n2, n3 ) );
+  MixedColor = mix( MixedColor, color3, 1.0 - n );
 
   vec3 pos = aPosition;
 
-  pos.y += n * 0.4;
+  M = linearParabola( aUv.y );
+  M = smoothstep( 0.0, 0.5, M );
 
-  gl_Position = projection * view * model * vec4( pos, 1.0);
+  pos.y += ( n * 0.35 ) * M;
+
+  gl_Position = projection * view * model * vec4( pos, 1.0 );
 
 
 }
