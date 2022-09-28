@@ -16,12 +16,6 @@ export default class Main {
 		const example = new Example();
 		example.start();
 
-		window.addEventListener( "resize", () => {
-
-			example.resize();
-
-		} );
-
 	}
 
 }

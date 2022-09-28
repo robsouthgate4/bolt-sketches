@@ -8,6 +8,7 @@ import {
 	GL_TOUCH_START_TOPIC,
 	GL_RESIZE_TOPIC,
 	GL_KEYDOWN_TOPIC,
+	GL_KEYUP_TOPIC,
 } from "./constants";
 
 export interface ITouchEvent {
@@ -89,6 +90,7 @@ export default class EventListeners {
 		window.removeEventListener("mousemove", this.onMouseMove.bind(this));
 		window.removeEventListener("wheel", this.onWheel.bind(this));
 		window.removeEventListener("keydown", this.onKeyDown.bind(this));
+		window.removeEventListener("keyup", this.onKeyUp.bind(this));
 	}
 
 	onMouse(ev: MouseEvent) {
@@ -98,6 +100,10 @@ export default class EventListeners {
 
 	onKeyDown(ev: KeyboardEvent) {
 		this.publish(GL_KEYDOWN_TOPIC, ev);
+	}
+
+	onKeyUp(ev: KeyboardEvent) {
+		this.publish(GL_KEYUP_TOPIC, ev);
 	}
 
 	onMouseEnd(ev: MouseEvent) {

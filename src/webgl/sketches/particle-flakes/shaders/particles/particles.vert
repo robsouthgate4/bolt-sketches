@@ -15,6 +15,7 @@ out vec2 Uv;
 out vec4 ShadowCoord;
 out vec3 FragPosition;
 out vec3 Eye;
+out float Fog;
 
 uniform mat4 projection;
 uniform mat4 model;
@@ -28,6 +29,14 @@ uniform float particleScale;
 //  www.iquilezles.org/www/articles/functions/functions.htm
 float parabola( float x, float k ){
     return pow( 4.0*x*(1.0-x), k );
+}
+
+float fogFactorLinear(
+    const float dist,
+    const float start,
+    const float end
+) {
+    return 1.0 - clamp((end - dist) / (end - start), 0.0, 1.0);
 }
 
 mat4 rotation3d(vec3 axis, float angle) {
@@ -80,8 +89,6 @@ void main() {
 
     ShadowCoord = lightSpaceMatrix * worldPosition;
 
-    mat4 mvp = model * view * projection;
-
     gl_Position = projection * view * worldPosition;
 
     vec3 rotatedNormal = aNormal;
@@ -89,6 +96,7 @@ void main() {
 
     Normal = ( model * ( lookAt * vec4( rotatedNormal, 0.0 ) ) ).xyz;
 
+    mat4 mvp = model * view * projection;
     Eye = normalize(mvp * vec4(transformed, 1.0)).xyz;
 
 }

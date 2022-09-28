@@ -24,12 +24,13 @@ import EaseNumber from "@/webgl/helpers/EaseNumber";
 import Raycast from "@/webgl/modules/raycast";
 import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
 import Ray from "@/webgl/modules/raycast/Ray";
-import { GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
+import { GL_RESIZE_TOPIC, GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import Sphere from "@/webgl/modules/primitives/Sphere";
 
 import normalVertexShader from "./shaders/normal/normal.vert";
 import normalFragmentShader from "./shaders/normal/normal.frag";
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
+import { getDeviceType } from "@/utils";
 
 export default class extends Base {
 
@@ -109,10 +110,17 @@ export default class extends Base {
 			vec3.multiply(rayScaled, this.ray.direction, vec3.fromValues(scale, scale, scale));
 			vec3.add(rayEnd, rayEnd, rayScaled);
 
-
 			this.repellorTarget.x = rayEnd[0];
 			this.repellorTarget.y = rayEnd[1];
 			this.repellorTarget.z = rayEnd[2];
+
+		});
+
+		this.eventListeners.listen(GL_RESIZE_TOPIC, (e: any) => {
+
+			this.width = window.innerWidth;
+			this.height = window.innerHeight;
+			this.camera.updateProjection(this.width / this.height);
 
 		});
 
@@ -146,21 +154,34 @@ export default class extends Base {
 		mat4.multiply(this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view);
 
 		this.orbit = new Orbit(this.camera, {
-			minElevation: -Infinity,
-			maxElevation: Infinity,
-			ease: 0.06,
+			minRadius: 5,
+			maxRadius: 50,
+			minElevation: -Math.PI * 0.5,
+			maxElevation: Math.PI * 0.5,
+			ease: 0.04,
+			zoomSpeed: 0.25,
+			disableOrbit: getDeviceType() === "mobile",
 		});
 
 		this.bolt.setCamera(this.camera);
 		this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
 		this.bolt.enableDepth();
 
+		this.resize();
+
 	}
 
 	// construct the sketch
 	async initSketch() {
 
-		//const ray = this.raycaster.generateRayFromCamera(this.camera);
+
+		// check if particle count is in local storage
+		if (localStorage.getItem("particleCount") !== null) {
+
+			this.instanceCount = parseInt(localStorage.getItem("particleCount") as string);
+			this.config.particleCount = this.instanceCount;
+
+		}
 
 		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
 
@@ -231,9 +252,9 @@ export default class extends Base {
 			offsets.push((Math.random() * 2 - 1) * 5);
 			offsets.push((Math.random() * 2 - 1) * 5);
 
-			velocities.push(0);
-			velocities.push(0);
-			velocities.push(0);
+			velocities.push((Math.random() * 2 - 1) * 0.2);
+			velocities.push((Math.random() * 2 - 1) * 0.2);
+			velocities.push((Math.random() * 2 - 1) * 0.2);
 
 		}
 
@@ -289,9 +310,6 @@ export default class extends Base {
 				}
 			]
 		);
-
-
-		this.resize();
 
 		const pp = new Program(particlesVertexInstanced, particlesFragmentInstanced);
 
@@ -353,7 +371,12 @@ export default class extends Base {
 
 		const folder = gui;
 
-		folder.add(this.config, "particleCount", [5000, 10000, 20000, 30000]).onChange((valu: number) => { });
+		folder.add(this.config, "particleCount", [5000, 10000, 20000, 30000]).onChange((value: number) => {
+
+			localStorage.setItem("particleCount", value.toString());
+			window.location.reload();
+
+		});
 
 		folder.add(this.config, "particleScale", 0.1, 1).step(0.01).onChange((value: number) => {
 			this.particleDrawState.uniformFloat("particleScale", value);
@@ -389,8 +412,9 @@ export default class extends Base {
 
 	resize() {
 
+
 		this.bolt.resizeFullScreen();
-		this.camera.updateProjection(this.gl.canvas.width / this.gl.canvas.height);
+		this.camera.updateProjection(this.canvas.width / this.canvas.height);
 
 	}
 
@@ -405,6 +429,7 @@ export default class extends Base {
 		if (!this.assetsLoaded) return;
 
 		this.orbit.update();
+
 		vec3.set(this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z);
 
 		let d = vec3.distance(this.repellorPosition, this.repellorPositinPrevious);

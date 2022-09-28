@@ -1,5 +1,7 @@
 import { vec3 } from "gl-matrix";
 import { Node } from "@bolt-webgl/core";
+import EventListeners, { ITouchEvent } from "../event-listeners";
+import { GL_KEYDOWN_TOPIC, GL_KEYUP_TOPIC, GL_TOUCH_END_TOPIC, GL_TOUCH_MOVE_TOPIC, GL_TOUCH_START_TOPIC, GL_WHEEL_TOPIC } from "../event-listeners/constants";
 
 export default class Orbit {
 
@@ -30,6 +32,10 @@ export default class Orbit {
 	private _maxElevation: number;
 	private _minAzimuth: number;
 	private _maxAzimuth: number;
+	private _minRadius: number;
+	private _maxRadius: number;
+	private _eventListeners = EventListeners.getInstance();
+	private _disableOrbit: boolean;
 
 	constructor(
 		node: Node,
@@ -38,10 +44,13 @@ export default class Orbit {
 			rotateSpeed = 3,
 			ease = 0.25,
 			zoomSpeed = 1,
+			minRadius = 0.01,
+			maxRadius = 50,
 			minElevation = 0,
 			maxElevation = Math.PI * 0.5,
 			minAzimuth = - Infinity,
 			maxAzimuth = Infinity,
+			disableOrbit = false
 		} = {}) {
 
 		this._ease = ease;
@@ -52,6 +61,9 @@ export default class Orbit {
 		this._maxElevation = maxElevation;
 		this._minAzimuth = minAzimuth;
 		this._maxAzimuth = maxAzimuth;
+		this._minRadius = minRadius;
+		this._maxRadius = maxRadius;
+		this._disableOrbit = disableOrbit;
 
 		this._node = node;
 		this._offset = node.transform.position;
@@ -92,27 +104,18 @@ export default class Orbit {
 
 	private _initListeners() {
 
-		window.addEventListener("mousemove", this._handleMouseMove.bind(this));
-		window.addEventListener("mousedown", this._handleMouseDown.bind(this));
-		window.addEventListener("mouseup", this._handleMouseUp.bind(this));
-		window.addEventListener("wheel", this._handleWheel.bind(this));
-		window.addEventListener("keydown", this._handleKeyDown.bind(this));
-		window.addEventListener("keyup", this._handleKeyUp.bind(this));
+		this._eventListeners.listen(GL_TOUCH_MOVE_TOPIC, this._handleMouseMove.bind(this));
+		this._eventListeners.listen(GL_TOUCH_START_TOPIC, this._handleMouseDown.bind(this));
+		this._eventListeners.listen(GL_TOUCH_END_TOPIC, this._handleMouseUp.bind(this));
+		this._eventListeners.listen(GL_WHEEL_TOPIC, this._handleWheel.bind(this));
+		this._eventListeners.listen(GL_KEYDOWN_TOPIC, this._handleKeyDown.bind(this));
+		this._eventListeners.listen(GL_KEYUP_TOPIC, this._handleKeyUp.bind(this));
 
 	}
 
-	private _getMousePosition(ev: MouseEvent) {
+	private _handleKeyDown(ev: any) {
 
-		return {
-			x: (ev.clientX / window.innerWidth) * 2 - 1,
-			y: - (ev.clientY / window.innerHeight) * 2 + 1,
-		};
-
-	}
-
-	private _handleKeyDown(ev: KeyboardEvent) {
-
-		if (ev.shiftKey) {
+		if (ev.detail.shiftKey) {
 
 			this._shiftKeyDown = true;
 
@@ -130,23 +133,23 @@ export default class Orbit {
 
 	}
 
-	private _handleWheel(ev: WheelEvent) {
+	private _handleWheel(ev: any) {
 
 		if (this._shiftKeyDown) return;
 
-		const direction = Math.sign(ev.deltaY);
+		const direction = Math.sign(ev.detail.deltaY);
 
 		this._sphericalTarget.radius += (direction * this._zoomSpeed);
 
 
 	}
 
-	private _handleMouseDown(ev: MouseEvent) {
+	private _handleMouseDown(ev: any) {
 
 		this._mouseDown = true;
 
-		this._mouseXOnDown = this._getMousePosition(ev).x;
-		this._mouseYOnDown = this._getMousePosition(ev).y;
+		this._mouseXOnDown = ev.detail.normalized.x;
+		this._mouseYOnDown = ev.detail.normalized.y;
 
 		if (!this._shiftKeyDown) {
 
@@ -161,14 +164,14 @@ export default class Orbit {
 
 	}
 
-	private _handleMouseMove(ev: MouseEvent) {
+	private _handleMouseMove(ev: any) {
 
 		if (!this._mouseDown) return;
 
 		if (!this._shiftKeyDown) {
 
-			const mouseX = this._getMousePosition(ev).x;
-			const mouseY = this._getMousePosition(ev).y;
+			const mouseX = ev.detail.normalized.x;
+			const mouseY = ev.detail.normalized.y;
 
 			const deltaX = (mouseX - this._mouseXOnDown) * this._rotateSpeed;
 			const deltaY = (mouseY - this._mouseYOnDown) * this._rotateSpeed;
@@ -178,8 +181,8 @@ export default class Orbit {
 
 		} else {
 
-			const mouseX = this._getMousePosition(ev).x;
-			const mouseY = this._getMousePosition(ev).y;
+			const mouseX = ev.detail.normalized.x;
+			const mouseY = ev.detail.normalized.y;
 
 			const deltaX = (mouseX - this._mouseXOnDown) * this._panSpeed;
 			const deltaY = (mouseY - this._mouseYOnDown) * this._panSpeed;
@@ -256,11 +259,17 @@ export default class Orbit {
 		this._sphericalTarget.azimuth = Math.max(this._sphericalTarget.azimuth, this._minAzimuth);
 		this._sphericalTarget.azimuth = Math.min(this._maxAzimuth, this._sphericalTarget.azimuth);
 
-		this._sphericalTarget.radius = Math.max(this._sphericalTarget.radius, 0.001);
+		this._sphericalTarget.radius = Math.max(this._sphericalTarget.radius, this._minRadius);
+		this._sphericalTarget.radius = Math.min(this._sphericalTarget.radius, this._maxRadius);
 
 		// lerp to target spherical position
-		this._sphericalCurrent.azimuth += (this._sphericalTarget.azimuth - this._sphericalCurrent.azimuth) * this._ease;
-		this._sphericalCurrent.elevation += (this._sphericalTarget.elevation - this._sphericalCurrent.elevation) * this._ease;
+
+		if (!this._disableOrbit) {
+
+			this._sphericalCurrent.azimuth += (this._sphericalTarget.azimuth - this._sphericalCurrent.azimuth) * this._ease;
+			this._sphericalCurrent.elevation += (this._sphericalTarget.elevation - this._sphericalCurrent.elevation) * this._ease;
+		}
+
 		this._sphericalCurrent.radius += (this._sphericalTarget.radius - this._sphericalCurrent.radius) * this._ease;
 
 		// lerp to target pan position
