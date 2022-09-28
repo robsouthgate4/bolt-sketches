@@ -1,4 +1,4 @@
-import Bolt, { FBO, Mesh, Program, TextureCube, Texture2D, Viewport, DrawSet, VBO, AttribPointer, TypedArray, NONE } from "@bolt-webgl/core";
+import Bolt, { FBO, Mesh, Program, TextureCube, Texture2D, Viewport, DrawSet, VBO, AttribPointer, TypedArray, NONE } from "@/webgl/libs/bolt";
 import { mat2, mat3, mat4, vec2, vec3, vec4 } from "gl-matrix";
 
 export default class DrawState {

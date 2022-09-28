@@ -1,5 +1,4 @@
-import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform } from "@bolt-webgl/core";
-import { GeometryBuffers } from "@bolt-webgl/core/build/Mesh";
+import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform, GeometryBuffers } from "@/webgl/libs/bolt";
 import { mat4, quat, vec3, vec4 } from "gl-matrix";
 import { Accessor, GlTf, Material, Mesh as GLTFMesh, MeshPrimitive, Node as GLTFNode, Texture as GLTFTexture, Skin as GLTFSkin, BufferView, Animation as GLTFAnimation } from "./types/gltf";
 import { TypedArray } from "./types/typedArray";

@@ -1,4 +1,4 @@
-import Bolt, { BACK, Camera, DrawSet, FBO, FRONT, Node, Program } from "@bolt-webgl/core";
+import Bolt, { BACK, Camera, DrawSet, FBO, FRONT, Node, Program } from "@/webgl/libs/bolt";
 import { mat4 } from "gl-matrix";
 
 import depthVertex from "./shaders/depth/depth.vert";

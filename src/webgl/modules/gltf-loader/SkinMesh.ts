@@ -1,5 +1,4 @@
-import { Mesh, Node, Program } from "@bolt-webgl/core";
-import { GeometryBuffers, MeshParams } from "@bolt-webgl/core/build/Mesh";
+import { Mesh, Node, Program, GeometryBuffers, MeshParams } from "@/webgl/libs/bolt";
 import { mat4 } from "gl-matrix";
 import Skin from "./Skin";
 
@@ -7,33 +6,33 @@ export default class SkinMesh extends Mesh {
 
 	private _skin?: Skin | undefined;
 
-	constructor( geometry?: GeometryBuffers, params?: MeshParams, ) {
+	constructor(geometry?: GeometryBuffers, params?: MeshParams,) {
 
-		super( geometry, params );
+		super(geometry, params);
 
 		this.isSkinMesh = true;
 
 	}
 
-	draw( program: Program, node: Node ) {
+	draw(program: Program, node: Node) {
 
-		if ( ! this._skin || ! node ) return;
+		if (!this._skin || !node) return;
 
-		this._skin.update( node! );
+		this._skin.update(node!);
 
 		// activate program and pass joint data to program
 		program.activate();
-		program.setTexture( "jointTexture", this._skin.jointTexture );
+		program.setTexture("jointTexture", this._skin.jointTexture);
 
-		this._skin.jointMatrices.forEach( ( jointMatrix, i ) => {
+		this._skin.jointMatrices.forEach((jointMatrix, i) => {
 
-			program.setMatrix4( `jointTransforms[${i}]`, jointMatrix );
+			program.setMatrix4(`jointTransforms[${i}]`, jointMatrix);
 
-		} );
+		});
 
-		program.setFloat( "jointCount", this._skin.joints.length );
+		program.setFloat("jointCount", this._skin.joints.length);
 
-		super.draw( program );
+		super.draw(program);
 
 	}
 
@@ -43,7 +42,7 @@ export default class SkinMesh extends Mesh {
 
 	}
 
-	public set skin( value: Skin | undefined ) {
+	public set skin(value: Skin | undefined) {
 
 		this._skin = value;
 

@@ -1,4 +1,4 @@
-import { DrawSet, LINES, Mesh, Program } from "@bolt-webgl/core";
+import { DrawSet, LINES, Mesh, Program } from "@/webgl/libs/bolt";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import Ray from "./Ray";
 
@@ -22,7 +22,7 @@ export default class AxisAlignedBox {
 	 * @param  {vec3} min min bounds vector
 	 * @param  {vec3} max max bound vector
 	 */
-	constructor( min: vec3, max: vec3 ) {
+	constructor(min: vec3, max: vec3) {
 
 		this._min = min;
 		this._max = max;
@@ -30,19 +30,19 @@ export default class AxisAlignedBox {
 		this._center = vec3.create();
 		this._extents = vec3.create();
 
-		vec3.add( this._center, this._min, this._max );
-		vec3.multiply( this._center, this._center, vec3.fromValues( 0.5, 0.5, 0.5 ) );
-		vec3.sub( this._extents, this._max, this._center );
+		vec3.add(this._center, this._min, this._max);
+		vec3.multiply(this._center, this._center, vec3.fromValues(0.5, 0.5, 0.5));
+		vec3.sub(this._extents, this._max, this._center);
 
-		this._absVector3( this._extents );
+		this._absVector3(this._extents);
 
 	}
 
-	_absVector3( vector3: vec3 ) {
+	_absVector3(vector3: vec3) {
 
-		vector3[ 0 ] = Math.abs( vector3[ 0 ] );
-		vector3[ 1 ] = Math.abs( vector3[ 1 ] );
-		vector3[ 2 ] = Math.abs( vector3[ 2 ] );
+		vector3[0] = Math.abs(vector3[0]);
+		vector3[1] = Math.abs(vector3[1]);
+		vector3[2] = Math.abs(vector3[2]);
 
 	}
 
@@ -51,12 +51,12 @@ export default class AxisAlignedBox {
 	 */
 	createVisualiser() {
 
-		const mesh = new Mesh( {
-			indices: [ 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 ],
-			positions: [ 0.5, 0.5, 0.5, - 0.5, 0.5, 0.5, - 0.5, - 0.5, 0.5, 0.5, - 0.5, 0.5, 0.5, 0.5, - 0.5, - 0.5, 0.5, - 0.5, - 0.5, - 0.5, - 0.5, 0.5, - 0.5, - 0.5 ]
-		} ).setDrawType( LINES );
+		const mesh = new Mesh({
+			indices: [0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7],
+			positions: [0.5, 0.5, 0.5, - 0.5, 0.5, 0.5, - 0.5, - 0.5, 0.5, 0.5, - 0.5, 0.5, 0.5, 0.5, - 0.5, - 0.5, 0.5, - 0.5, - 0.5, - 0.5, - 0.5, 0.5, - 0.5, - 0.5]
+		}).setDrawType(LINES);
 
-		const batch = new DrawSet( mesh, new Program( helperVertex, helperFragment ) );
+		const batch = new DrawSet(mesh, new Program(helperVertex, helperFragment));
 
 		batch.transform.position = this._center;
 
@@ -68,49 +68,49 @@ export default class AxisAlignedBox {
 	 * Transforms axis-aligned box to new coordinates via a matrix
 	 * @param  {mat4} matrix transformation matrix
 	 */
-	transform( matrix: mat4 ) {
+	transform(matrix: mat4) {
 
 		// conver mat4 to mat4
 		const m = mat3.create();
-		mat3.fromMat4( m, matrix );
+		mat3.fromMat4(m, matrix);
 
 		const x = vec3.create();
 		const y = vec3.create();
 		const z = vec3.create();
 
-		const extents = vec3.clone( this._extents );
+		const extents = vec3.clone(this._extents);
 
-		vec3.transformMat3( x, vec3.fromValues( extents[ 0 ], 0, 0 ), m );
-		vec3.transformMat3( y, vec3.fromValues( 0, extents[ 1 ], 0 ), m );
-		vec3.transformMat3( z, vec3.fromValues( 0, 0, extents[ 2 ] ), m );
+		vec3.transformMat3(x, vec3.fromValues(extents[0], 0, 0), m);
+		vec3.transformMat3(y, vec3.fromValues(0, extents[1], 0), m);
+		vec3.transformMat3(z, vec3.fromValues(0, 0, extents[2]), m);
 
-		this._absVector3( x );
-		this._absVector3( y );
-		this._absVector3( z );
+		this._absVector3(x);
+		this._absVector3(y);
+		this._absVector3(z);
 
-		vec3.add( extents, x, y );
-		vec3.add( extents, extents, z );
+		vec3.add(extents, x, y);
+		vec3.add(extents, extents, z);
 
 		this._center = vec3.create();
 
-		const v4 = vec4.fromValues( this._center[ 0 ], this._center[ 1 ], this._center[ 2 ], 1 );
-		vec4.transformMat4( v4, v4, matrix );
+		const v4 = vec4.fromValues(this._center[0], this._center[1], this._center[2], 1);
+		vec4.transformMat4(v4, v4, matrix);
 
-		this._center = vec3.fromValues( v4[ 0 ], v4[ 1 ], v4[ 2 ] );
+		this._center = vec3.fromValues(v4[0], v4[1], v4[2]);
 
 		this._min = vec3.create();
 		this._max = vec3.create();
 
 		// add positinal offsets
-		vec3.sub( this._min, this._center, extents );
-		vec3.add( this._max, this._center, extents );
+		vec3.sub(this._min, this._center, extents);
+		vec3.add(this._max, this._center, extents);
 
 
-		if ( this._visualiser ) {
+		if (this._visualiser) {
 
 			this._visualiser.transform.position = this._center;
 			const size = vec3.create();
-			vec3.subtract( size, this._min, this._max );
+			vec3.subtract(size, this._min, this._max);
 			this._visualiser.transform.scale = size;
 
 		}
@@ -121,21 +121,21 @@ export default class AxisAlignedBox {
 	 * @param  {Ray} ray
 	 * @returns boolean returns true / false based on ray interesection
 	 */
-	intersects( ray: Ray ): boolean {
+	intersects(ray: Ray): boolean {
 
 		const min = vec3.create();
 		const max = vec3.create();
 
-		vec3.sub( min, this._min, ray.origin );
-		vec3.div( min, min, ray.direction );
+		vec3.sub(min, this._min, ray.origin);
+		vec3.div(min, min, ray.direction);
 
-		vec3.sub( max, this._max, ray.origin );
-		vec3.div( max, max, ray.direction );
+		vec3.sub(max, this._max, ray.origin);
+		vec3.div(max, max, ray.direction);
 
-		const fmin = Math.max( Math.max( Math.min( min[ 0 ], max[ 0 ] ), Math.min( min[ 1 ], max[ 1 ] ) ), Math.min( min[ 2 ], max[ 2 ] ) );
-		const fmax = Math.min( Math.min( Math.max( min[ 0 ], max[ 0 ] ), Math.max( min[ 1 ], max[ 1 ] ) ), Math.max( min[ 2 ], max[ 2 ] ) );
+		const fmin = Math.max(Math.max(Math.min(min[0], max[0]), Math.min(min[1], max[1])), Math.min(min[2], max[2]));
+		const fmax = Math.min(Math.min(Math.max(min[0], max[0]), Math.max(min[1], max[1])), Math.max(min[2], max[2]));
 
-		return ( fmax >= fmin );
+		return (fmax >= fmin);
 
 	}
 
@@ -145,7 +145,7 @@ export default class AxisAlignedBox {
 
 	}
 
-	public set min( value: vec3 ) {
+	public set min(value: vec3) {
 
 		this._min = value;
 
@@ -157,7 +157,7 @@ export default class AxisAlignedBox {
 
 	}
 
-	public set max( value: vec3 ) {
+	public set max(value: vec3) {
 
 		this._max = value;
 
@@ -169,7 +169,7 @@ export default class AxisAlignedBox {
 
 	}
 
-	public set center( value: vec3 ) {
+	public set center(value: vec3) {
 
 		this._center = value;
 
@@ -180,7 +180,7 @@ export default class AxisAlignedBox {
 		return this._visualiser;
 
 	}
-	public set visualiser( value: DrawSet | undefined ) {
+	public set visualiser(value: DrawSet | undefined) {
 
 		this._visualiser = value;
 

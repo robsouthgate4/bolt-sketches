@@ -1,4 +1,4 @@
-import Bolt, { DrawSet, CameraPersp, FBO, Node, RBO, RGBA, Program, UNSIGNED_BYTE } from "@bolt-webgl/core";
+import Bolt, { DrawSet, CameraPersp, FBO, Node, RBO, RGBA, Program, UNSIGNED_BYTE } from "@/webgl/libs/bolt";
 import { mat4, vec2, vec4 } from "gl-matrix";
 import fragmentShader from "./shaders/picking.frag";
 import vertexShader from "./shaders/picking.vert";
@@ -24,35 +24,35 @@ export default class GPUPicker {
 	private _projectionMatrix = mat4.create();
 	private _viewProjectionMatrix = mat4.create();
 
-	constructor( bolt: Bolt ) {
+	constructor(bolt: Bolt) {
 
 		this._bolt = bolt;
 		this._gl = this._bolt.getContext();
 		this._canvas = this._gl.canvas;
-		this._camera = <CameraPersp> this._bolt.camera;
+		this._camera = <CameraPersp>this._bolt.camera;
 
-		this._fbo = new FBO( { width: 1, height: 1 } );
+		this._fbo = new FBO({ width: 1, height: 1 });
 		this._fbo.bind();
-		this._rbo = new RBO( { width: 1, height: 1 } );
+		this._rbo = new RBO({ width: 1, height: 1 });
 		this._fbo.unbind();
 		this._rbo.unbind();
 
-		this._pickingProgram = new Program( vertexShader, fragmentShader );
+		this._pickingProgram = new Program(vertexShader, fragmentShader);
 
 	}
 
-	_getPickedID( mouse: vec2 ) {
+	_getPickedID(mouse: vec2) {
 
-		const pixelX = mouse[ 0 ] * this._canvas.width / this._canvas.clientWidth;
-		const pixelY = this._gl.canvas.height - mouse[ 1 ] * this._gl.canvas.height / this._gl.canvas.clientHeight - 1;
-		const data = new Uint8Array( 4 );
+		const pixelX = mouse[0] * this._canvas.width / this._canvas.clientWidth;
+		const pixelY = this._gl.canvas.height - mouse[1] * this._gl.canvas.height / this._gl.canvas.clientHeight - 1;
+		const data = new Uint8Array(4);
 
 		const subLeft = this._nearPlane.left + pixelX * this._nearPlane.width / this._canvas.width;
 		const subBottom = this._nearPlane.bottom + pixelY * this._nearPlane.height / this._canvas.height;
 		const subWidth = this._nearPlane.width / this._canvas.width;
 		const subHeight = this._nearPlane.height / this._canvas.height;
 
-		mat4.frustum( this._projectionMatrix, subLeft, subLeft + subWidth, subBottom, subBottom + subHeight, this._camera.near, this._camera.far );
+		mat4.frustum(this._projectionMatrix, subLeft, subLeft + subWidth, subBottom, subBottom + subHeight, this._camera.near, this._camera.far);
 
 		// read pixel under mouse
 		this._gl.readPixels(
@@ -66,10 +66,10 @@ export default class GPUPicker {
 		);
 
 		// decodes vec4 back to integer ( 8 bits per channel )
-		let id = data[ 0 ] + ( data[ 1 ] << 8 ) + ( data[ 2 ] << 16 ) + ( data[ 3 ] << 24 );
+		let id = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
 
 		// no picked item is equal to -1
-		if ( id < 0 ) id = - 1;
+		if (id < 0) id = - 1;
 
 		this._currentPickingID = id;
 
@@ -78,12 +78,12 @@ export default class GPUPicker {
 	 * @param  {vec2} mouse mouse coordinate relative to thre canvas
 	 * @returns number the id of the picked object
 	 */
-	pick( mouse: vec2 ): number {
+	pick(mouse: vec2): number {
 
 		this._generatePixelFrustum();
 
 		this._drawPickingBuffer();
-		this._getPickedID( mouse );
+		this._getPickedID(mouse);
 
 		this._fbo.unbind();
 
@@ -96,39 +96,39 @@ export default class GPUPicker {
 	/**
 	 * @param  {Node|Node[]} nodes nodes to check for picking
 	 */
-	setNodes( nodes: Node | Node[] ) {
+	setNodes(nodes: Node | Node[]) {
 
 		let id = 0;
 
-		const createPickingData = ( node: Node ) => {
+		const createPickingData = (node: Node) => {
 
-			node.traverse( ( childNode: Node ) => {
+			node.traverse((childNode: Node) => {
 
-				if ( childNode instanceof DrawSet ) {
+				if (childNode instanceof DrawSet) {
 
-					id ++;
+					id++;
 
-					this._pickingDataArray.push( { batch: childNode, id, initialShader: childNode.program } );
+					this._pickingDataArray.push({ batch: childNode, id, initialShader: childNode.program });
 
 				}
 
 
-			} );
+			});
 
 		};
 
-		if ( Array.isArray( nodes ) ) {
+		if (Array.isArray(nodes)) {
 
-			for ( let i = 0; i < nodes.length; i ++ ) {
+			for (let i = 0; i < nodes.length; i++) {
 
-				const node = nodes[ i ];
-				createPickingData( node );
+				const node = nodes[i];
+				createPickingData(node);
 
 			}
 
 		} else {
 
-			createPickingData( nodes );
+			createPickingData(nodes);
 
 		}
 
@@ -145,12 +145,12 @@ export default class GPUPicker {
 
 		const aspect = this._canvas.clientWidth / this._canvas.clientHeight;
 
-		const top = Math.tan( this._camera.fov * 0.5 ) * this._camera.near;
+		const top = Math.tan(this._camera.fov * 0.5) * this._camera.near;
 		const bottom = - top;
 		const left = aspect * bottom;
 		const right = aspect * top;
-		const width = Math.abs( right - left );
-		const height = Math.abs( top - bottom );
+		const width = Math.abs(right - left);
+		const height = Math.abs(top - bottom);
 
 		this._nearPlane = {
 			top,
@@ -174,33 +174,33 @@ export default class GPUPicker {
 		this._bolt.enableCullFace();
 		this._bolt.enableDepth();
 
-		this._bolt.setViewPort( 0, 0, 1, 1 );
-		this._bolt.clear( 0, 0, 0, 1 );
+		this._bolt.setViewPort(0, 0, 1, 1);
+		this._bolt.clear(0, 0, 0, 1);
 
-		for ( let i = 0; i < this._pickingDataArray.length; i ++ ) {
+		for (let i = 0; i < this._pickingDataArray.length; i++) {
 
-			const pickingItem = this._pickingDataArray[ i ];
+			const pickingItem = this._pickingDataArray[i];
 
 			const { batch, id } = pickingItem;
 			batch.program = this._pickingProgram;
 			batch.program.activate();
 
-			mat4.multiply( this._viewProjectionMatrix, this._projectionMatrix, this._camera.view );
+			mat4.multiply(this._viewProjectionMatrix, this._projectionMatrix, this._camera.view);
 
 			// set the projection matrix to be the picking projection matrix ( 1 pixel frustum )
-			batch.program.setMatrix4( "viewProjection", this._viewProjectionMatrix );
+			batch.program.setMatrix4("viewProjection", this._viewProjectionMatrix);
 
 			// adapted from https://webgl2fundamentals.org/webgl/lessons/webgl-picking.html
 			batch.program.setVector4(
 				"id",
 				vec4.fromValues(
-					( ( id >> 0 ) & 0xFF ) / 0xFF,
-					( ( id >> 8 ) & 0xFF ) / 0xFF,
-					( ( id >> 16 ) & 0xFF ) / 0xFF,
-					( ( id >> 24 ) & 0xFF ) / 0xFF,
-				) );
+					((id >> 0) & 0xFF) / 0xFF,
+					((id >> 8) & 0xFF) / 0xFF,
+					((id >> 16) & 0xFF) / 0xFF,
+					((id >> 24) & 0xFF) / 0xFF,
+				));
 
-			this._bolt.draw( batch );
+			this._bolt.draw(batch);
 
 		}
 
@@ -211,9 +211,9 @@ export default class GPUPicker {
 	 */
 	_restoreShaders() {
 
-		for ( let i = 0; i < this._pickingDataArray.length; i ++ ) {
+		for (let i = 0; i < this._pickingDataArray.length; i++) {
 
-			const pickingItem = this._pickingDataArray[ i ];
+			const pickingItem = this._pickingDataArray[i];
 			const { batch, initialShader } = pickingItem;
 			batch.program = initialShader;
 
@@ -226,7 +226,7 @@ export default class GPUPicker {
 		return this._currentPickingID;
 
 	}
-	public set currentPickingID( value: number ) {
+	public set currentPickingID(value: number) {
 
 		this._currentPickingID = value;
 

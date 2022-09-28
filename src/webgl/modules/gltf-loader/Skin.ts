@@ -1,4 +1,4 @@
-import { CLAMP_TO_EDGE, FLOAT, NEAREST, Node, RGBA, RGBA32f, Texture2D } from "@bolt-webgl/core";
+import { CLAMP_TO_EDGE, FLOAT, NEAREST, Node, RGBA, RGBA32f, Texture2D } from "@/webgl/libs/bolt";
 import { mat4 } from "gl-matrix";
 
 export default class Skin {
@@ -10,16 +10,16 @@ export default class Skin {
 	private _jointTexture: Texture2D;
 	private _globalWorldInverse = mat4.create();
 
-	constructor( joints: Node[], inverseBindMatrixData: Float32Array ) {
+	constructor(joints: Node[], inverseBindMatrixData: Float32Array) {
 
 		this._joints = joints;
 		this._inverseBindMatrices = [];
 		this._jointMatrices = [];
 
 		const mat4size = 4 * 4;
-		this._jointData = new Float32Array( this._joints.length * mat4size );
+		this._jointData = new Float32Array(this._joints.length * mat4size);
 
-		for ( let i = 0; i < joints.length; i ++ ) {
+		for (let i = 0; i < joints.length; i++) {
 
 			this._inverseBindMatrices.push(
 				new Float32Array(
@@ -29,12 +29,12 @@ export default class Skin {
 			);
 
 			this._jointMatrices.push(
-				new Float32Array( this._jointData.buffer, Float32Array.BYTES_PER_ELEMENT * mat4size * i, mat4size )
+				new Float32Array(this._jointData.buffer, Float32Array.BYTES_PER_ELEMENT * mat4size * i, mat4size)
 			);
 
 		}
 
-		this._jointTexture = new Texture2D( {
+		this._jointTexture = new Texture2D({
 			width: 4,
 			height: this._joints.length,
 			format: RGBA,
@@ -45,29 +45,29 @@ export default class Skin {
 			magFilter: NEAREST,
 			type: FLOAT,
 			generateMipmaps: false
-		} );
+		});
 
 	}
 
-	update( node: Node ) {
+	update(node: Node) {
 
 		//const globalInverse = mat4.create();
-		mat4.invert( this._globalWorldInverse, node.worldMatrix );
+		mat4.invert(this._globalWorldInverse, node.worldMatrix);
 
 		// apply inverse bind matrix to each joint
 
-		for ( let i = 0; i < this._joints.length; i ++ ) {
+		for (let i = 0; i < this._joints.length; i++) {
 
-			const joint = this._joints[ i ];
+			const joint = this._joints[i];
 
-			const dst = this._jointMatrices[ i ];
+			const dst = this._jointMatrices[i];
 
-			mat4.multiply( dst, this._globalWorldInverse, joint.modelMatrix );
-			mat4.multiply( dst, dst, this._inverseBindMatrices[ i ] );
+			mat4.multiply(dst, this._globalWorldInverse, joint.modelMatrix);
+			mat4.multiply(dst, dst, this._inverseBindMatrices[i]);
 
 		}
 
-		this._jointTexture.setFromData( this._jointData, 4, this._joints.length );
+		this._jointTexture.setFromData(this._jointData, 4, this._joints.length);
 
 	}
 
@@ -77,7 +77,7 @@ export default class Skin {
 
 	}
 
-	public set jointTexture( value: Texture2D ) {
+	public set jointTexture(value: Texture2D) {
 
 		this._jointTexture = value;
 
@@ -88,7 +88,7 @@ export default class Skin {
 		return this._joints;
 
 	}
-	public set joints( value: Node[] ) {
+	public set joints(value: Node[]) {
 
 		this._joints = value;
 
@@ -98,7 +98,7 @@ export default class Skin {
 		return this._jointMatrices;
 
 	}
-	public set jointMatrices( value: Float32Array[] ) {
+	public set jointMatrices(value: Float32Array[]) {
 
 		this._jointMatrices = value;
 

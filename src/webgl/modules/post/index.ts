@@ -1,6 +1,6 @@
 
 
-import Bolt, { FBO, RBO } from "@bolt-webgl/core";
+import Bolt, { FBO, RBO } from "@/webgl/libs/bolt";
 import { Pass } from "./passes/Pass";
 
 export default class Post {
@@ -14,42 +14,42 @@ export default class Post {
 	private _writeRBO: RBO;
 	private _readRBO: RBO;
 
-	constructor( bolt: Bolt ) {
+	constructor(bolt: Bolt) {
 
 		this.bolt = bolt;
 
 		this._width = window.innerWidth;
 		this._height = window.innerHeight;
 
-		this._readFbo = new FBO( { width: this._width, height: this._height } );
+		this._readFbo = new FBO({ width: this._width, height: this._height });
 		this._readFbo.bind();
-		this._readRBO = new RBO( { width: this._width, height: this._height } );
+		this._readRBO = new RBO({ width: this._width, height: this._height });
 		this._readFbo.unbind();
 
-		this._writeFbo = new FBO( { width: this._width, height: this._height } );
+		this._writeFbo = new FBO({ width: this._width, height: this._height });
 		this._writeFbo.bind();
-		this._writeRBO = new RBO( { width: this._width, height: this._height } );
+		this._writeRBO = new RBO({ width: this._width, height: this._height });
 		this._writeFbo.unbind();
 
 		this._passes = [];
 
 	}
 
-	add( pass: Pass, renderToScreen = false ) {
+	add(pass: Pass, renderToScreen = false) {
 
 		pass.renderToScreen = renderToScreen;
-		this._passes.push( pass );
+		this._passes.push(pass);
 
 		return this;
 
 	}
 
-	resize( width: number, height: number ) {
+	resize(width: number, height: number) {
 
-		this._readFbo.resize( width, height );
-		this._writeFbo.resize( width, height );
-		this._readRBO.resize( width, height );
-		this._writeRBO.resize( width, height );
+		this._readFbo.resize(width, height);
+		this._writeFbo.resize(width, height);
+		this._readRBO.resize(width, height);
+		this._writeRBO.resize(width, height);
 
 	}
 
@@ -77,15 +77,15 @@ export default class Post {
 		this.bolt.disableDepth();
 		this.bolt.disableCullFace();
 
-		const enabledPasses = this._passes.filter( pass => pass.enabled );
+		const enabledPasses = this._passes.filter(pass => pass.enabled);
 
-		enabledPasses.forEach( ( pass: Pass ) => {
+		enabledPasses.forEach((pass: Pass) => {
 
-			pass.draw( this._readFbo, this._writeFbo, pass.texture, pass.renderToScreen );
+			pass.draw(this._readFbo, this._writeFbo, pass.texture, pass.renderToScreen);
 
 			this.swap();
 
-		} );
+		});
 
 	}
 

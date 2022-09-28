@@ -4,7 +4,7 @@ export default {
 	particleSpeed: 1,
 	particleLifeRate: 0.07,
 	repellorStrength: 0.055,
-	shadowStrength: 0.6,
+	shadowStrength: 0.3,
 	colorMode: "dark",
 	curlStrength: 1,
 	light: {

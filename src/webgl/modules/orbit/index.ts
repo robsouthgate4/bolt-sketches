@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import { Node } from "@bolt-webgl/core";
+import { Node } from "@/webgl/libs/bolt";
 import EventListeners, { ITouchEvent } from "../event-listeners";
 import { GL_KEYDOWN_TOPIC, GL_KEYUP_TOPIC, GL_TOUCH_END_TOPIC, GL_TOUCH_MOVE_TOPIC, GL_TOUCH_START_TOPIC, GL_WHEEL_TOPIC } from "../event-listeners/constants";
 
