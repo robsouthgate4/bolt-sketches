@@ -43,12 +43,14 @@ float noise( in vec2 p )
 
 void main() {
 
-  vec2 uv = gl_FragCoord.xy / resolution.xy;
-  uv -= 0.5;
-  uv.x *= resolution.x / resolution.y;
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
 
-  float n = noise( uv * 250. ) * 0.5 + 0.5;
+    float n = noise( uv * 280. ) * 0.5 + 0.5;
 
-   FragColor = vec4( mix( MixedColor, MixedColor * 0.9, n ), 1.0);
+	FragColor = vec4( mix( MixedColor, MixedColor * 0.9, n ), 1.0);
+
+	//FragColor = vec4( MixedColor, 1.0 );
 
 }

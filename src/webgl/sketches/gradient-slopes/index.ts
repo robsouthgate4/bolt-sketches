@@ -31,7 +31,6 @@ export default class extends Base {
 	drawSet!: DrawSet;
 	gridDrawState!: DrawState;
 	config: any;
-	colorEase = new EaseNumber(config.colorMode === "light" ? 0 : 1, 0.02);
 	raycaster = new Raycast();
 	eventListeners = EventListeners.getInstance();
 	ray: Ray;
@@ -136,6 +135,10 @@ export default class extends Base {
 		this.gridDrawState = new DrawState(this.bolt)
 			.setDrawSet(gridDrawSet)
 			.setCullFace(NONE)
+			//.uniformVector3("noiseAscale", this.config.noiseA.scale.value)
+			.uniformVector3("colorA", vec3.fromValues(this.config.colorA.value[0], this.config.colorA.value[1], this.config.colorA.value[2]))
+			.uniformVector3("colorB", vec3.fromValues(this.config.colorB.value[0], this.config.colorB.value[1], this.config.colorB.value[2]))
+			.uniformVector3("colorC", vec3.fromValues(this.config.colorC.value[0], this.config.colorC.value[1], this.config.colorC.value[2]))
 			.clear(12 / 255, 180 / 255, 198 / 255, 1)
 			.setViewport(0, 0, this.canvas.width, this.canvas.height)
 
@@ -145,8 +148,34 @@ export default class extends Base {
 	initGUI() {
 
 		const gui = new GUI();
-		const folder = gui;
-		folder.open();
+
+		Object.entries(this.config).forEach(([key, value]) => {
+			const folder = gui.addFolder(key);
+			if (key.includes("color")) {
+				//@ts-ignore
+				folder.addColor(value, "value").onChange((e: any) => {
+					this.config[key].value = e;
+					this.gridDrawState.uniformVector3(key, this.config[key].value);
+				});
+			}
+			if (key.includes("noise")) {
+				//@ts-ignore
+				folder.add(value.scale, "x", 0, 1).onChange((e: any) => {
+					// this.config[key].scale.x = e;
+					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				});
+				//@ts-ignore
+				folder.add(value.scale, "y", 0, 1).onChange((e: any) => {
+					// this.config[key].scale.x = e;
+					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				});
+				//@ts-ignore
+				folder.add(value.scale, "z", 0, 1).onChange((e: any) => {
+					// this.config[key].scale.x = e;
+					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				});
+			}
+		});
 
 	}
 
