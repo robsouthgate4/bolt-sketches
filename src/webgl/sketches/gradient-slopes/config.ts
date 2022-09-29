@@ -1,34 +1,36 @@
 import { vec3 } from "gl-matrix";
 
 export default {
-	noiseA: {
-		scale: {
+	peakScale: {
+		value: {
 			x: 0.8,
 			y: 1.0,
 			z: 1.5
 		}
 	},
-	noiseB: {
-		scale: {
-			x: 0.8,
+	colorNoiseScale: {
+		value: {
+			x: 0.9,
 			y: 1.0,
-			z: 1.5
+			z: 1.0
 		}
 	},
-	noiseC: {
-		scale: {
-			x: 0.8,
-			y: 1.0,
-			z: 1.5
-		}
+	noiseSlopeFrequency: {
+		value: 0.7
 	},
-	colorA: {
-		value: [1.0, 0.0, 0.0],
+	maxPeak: {
+		value: 0.9
 	},
-	colorB: {
-		value: [0.0, 0.0, 1.0],
+	color1: {
+		value: "#36dbf5",
 	},
-	colorC: {
-		value: [0.0, 1.0, 0.0],
+	color2: {
+		value: "#37f6f2",
+	},
+	color3: {
+		value: "#ffeed1",
+	},
+	animationSpeed: {
+		value: 0.2
 	}
 }

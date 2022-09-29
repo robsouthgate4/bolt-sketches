@@ -20,9 +20,18 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 normal;
 uniform float time;
-uniform vec3 colorA;
-uniform vec3 colorB;
-uniform vec3 colorC;
+
+uniform vec3 color1;
+uniform vec3 color2;
+uniform vec3 color3;
+
+uniform float noiseSlopeFrequency;
+uniform float maxPeak;
+uniform float animationSpeed;
+
+uniform vec3 colorNoiseScale;
+uniform vec3 peakScale;
+
 
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 float permute(float x){return floor(mod(((x*34.0)+1.0)*x, 289.0));}
@@ -126,24 +135,23 @@ void main() {
 
   Normal = ( normal * vec4( aNormal, 0.0 ) ).xyz;
 
-  float n  = snoise( vec4( (aPosition * vec3( 0.8, 1.0, 1.5 )  ) * vec3( 1.0 ), time * 0.2 ) ) * 0.5 + 0.5;
-  float n2 = snoise( vec4( ((aPosition * 2.0) * vec3( 0.7, 1.0, 1.0 ) ) * vec3( 0.5 ), time * 0.2 ) );
-  float n3 = snoise( vec4( ((aPosition * 1.2) * vec3( 1.0, 1.0, 1.0 ) ) * vec3( 0.8 ), time * 0.2 ) );
+  float peakNoise  = snoise( vec4( ( aPosition * peakScale ) * noiseSlopeFrequency, time * animationSpeed ) ) * 0.5 + 0.5;
 
-  MixedColor = vec3( 54.,	219.,	245.	 ) / 255.;
+  float n2 = snoise( vec4( (aPosition * colorNoiseScale ) * noiseSlopeFrequency, time * animationSpeed ) ) * 0.5 + 0.5;
 
-  vec3 color2  = (vec3( 54.,	219.,	245.	 ) / 255.) * 0.8;
+  MixedColor = color1;
 
-  vec3 color3  = vec3( 247.,	241.,	229.	 ) / 255.;
+  vec3 color2  = color2;
+  vec3 color3  = color3;
 
-  MixedColor = mix( MixedColor, color2, smoothstep( 0.0, 0.5, n2 ) );
-  MixedColor = mix( MixedColor, color3, smoothstep( 0.0, 0.8, n ) );
+  MixedColor = mix( MixedColor, color2, smoothstep( 0.0, 0.8, n2 ) );
+  MixedColor = mix( MixedColor, color3, smoothstep( 0.0, 0.8, peakNoise ) );
 
   vec3 pos = aPosition;
 
   M = linearParabola( aUv.y );
 
-  pos.y += ( n * 0.35 ) * M;
+  pos.y += ( peakNoise * maxPeak ) * M;
 
   gl_Position = projection * view * model * vec4( pos, 1.0 );
 

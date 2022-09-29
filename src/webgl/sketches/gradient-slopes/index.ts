@@ -18,6 +18,8 @@ import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
 import Ray from "@/webgl/modules/raycast/Ray";
 import { GL_RESIZE_TOPIC, GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import GLTFLoader from "@/webgl/modules/gltf-loader";
+import { hexToRgb, normalizeColor } from "@/utils";
+import EaseVec3 from "@/webgl/helpers/EaseVector3";
 
 export default class extends Base {
 
@@ -35,6 +37,14 @@ export default class extends Base {
 	eventListeners = EventListeners.getInstance();
 	ray: Ray;
 	frustumSize = 1;
+	peakScale = new EaseVec3(config.peakScale.value.x, config.peakScale.value.y, config.peakScale.value.z, 0.1);
+	colorNoiseScale = new EaseVec3(config.colorNoiseScale.value.x, config.colorNoiseScale.value.y, config.colorNoiseScale.value.z, 0.1);
+	noiseSlopeFrequency = new EaseNumber(config.noiseSlopeFrequency.value, 0.1);
+	maxPeak = new EaseNumber(config.maxPeak.value, 0.1);
+	color1 = new EaseVec3(...normalizeColor(hexToRgb(config.color1.value)), 0.1);
+	color2 = new EaseVec3(...normalizeColor(hexToRgb(config.color2.value)), 0.1);
+	color3 = new EaseVec3(...normalizeColor(hexToRgb(config.color3.value)), 0.1);
+	animationSpeed = new EaseNumber(config.animationSpeed.value, 0.2);
 
 	constructor() {
 
@@ -130,16 +140,11 @@ export default class extends Base {
 
 		const m = plane.setDrawType(TRIANGLES);
 		const gridDrawSet = new DrawSet(m, p);
-		gridDrawSet.transform.rotateX(Math.PI * 0.8);
+		gridDrawSet.transform.rotateX(Math.PI * 0.82);
 
 		this.gridDrawState = new DrawState(this.bolt)
 			.setDrawSet(gridDrawSet)
-			.setCullFace(NONE)
-			//.uniformVector3("noiseAscale", this.config.noiseA.scale.value)
-			.uniformVector3("colorA", vec3.fromValues(this.config.colorA.value[0], this.config.colorA.value[1], this.config.colorA.value[2]))
-			.uniformVector3("colorB", vec3.fromValues(this.config.colorB.value[0], this.config.colorB.value[1], this.config.colorB.value[2]))
-			.uniformVector3("colorC", vec3.fromValues(this.config.colorC.value[0], this.config.colorC.value[1], this.config.colorC.value[2]))
-			.clear(12 / 255, 180 / 255, 198 / 255, 1)
+			.clear(0, 0, 0, 1)
 			.setViewport(0, 0, this.canvas.width, this.canvas.height)
 
 
@@ -151,30 +156,86 @@ export default class extends Base {
 
 		Object.entries(this.config).forEach(([key, value]) => {
 			const folder = gui.addFolder(key);
-			if (key.includes("color")) {
+
+			if (key === "color1" || key === "color2" || key === "color3") {
+
 				//@ts-ignore
 				folder.addColor(value, "value").onChange((e: any) => {
+
 					this.config[key].value = e;
-					this.gridDrawState.uniformVector3(key, this.config[key].value);
+					const rgb = normalizeColor(hexToRgb(e));
+					this[key].x = rgb[0];
+					this[key].y = rgb[1];
+					this[key].z = rgb[2];
+
 				});
 			}
-			if (key.includes("noise")) {
+
+			if (key === "noiseSlopeFrequency") {
+
 				//@ts-ignore
-				folder.add(value.scale, "x", 0, 1).onChange((e: any) => {
-					// this.config[key].scale.x = e;
-					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				folder.add(value, "value", 0, 5).onChange((e: any) => {
+					this.config[key].value = e;
+					this.noiseSlopeFrequency.value = e;
+				});
+
+			}
+
+			if (key === "maxPeak") {
+
+				//@ts-ignore
+				folder.add(value, "value", 0, 2).onChange((e: any) => {
+					this.config[key].value = e;
+					this.maxPeak.value = e;
+				});
+
+			}
+
+
+			if (key === "peakScale") {
+				//@ts-ignore
+				folder.add(value.value, "x", 0, 2).onChange((e: any) => {
+					this.config[key].value.x = e;
+					this.peakScale.x = e;
 				});
 				//@ts-ignore
-				folder.add(value.scale, "y", 0, 1).onChange((e: any) => {
-					// this.config[key].scale.x = e;
-					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				folder.add(value.value, "y", 0, 2).onChange((e: any) => {
+					this.config[key].value.y = e;
+					this.peakScale.y = e;
 				});
 				//@ts-ignore
-				folder.add(value.scale, "z", 0, 1).onChange((e: any) => {
-					// this.config[key].scale.x = e;
-					// this.gridDrawState.uniformVector3("noiseAscale", this.config[key].scale);
+				folder.add(value.value, "z", 0, 2).onChange((e: any) => {
+					this.config[key].value.z = e;
+					this.peakScale.z = e;
 				});
 			}
+
+			if (key === "colorNoiseScale") {
+				//@ts-ignore
+				folder.add(value.value, "x", 0, 5).onChange((e: any) => {
+					this.config[key].value.x = e;
+					this.colorNoiseScale.x = e;
+				});
+				//@ts-ignore
+				folder.add(value.value, "y", 0, 5).onChange((e: any) => {
+					this.config[key].value.y = e;
+					this.colorNoiseScale.y = e;
+				});
+				//@ts-ignore
+				folder.add(value.value, "z", 0, 5).onChange((e: any) => {
+					this.config[key].value.z = e;
+					this.colorNoiseScale.z = e;
+				});
+			}
+
+			if (key === "animationSpeed") {
+				//@ts-ignore
+				folder.add(value, "value", 0, 2).onChange((e: any) => {
+					this.config[key].value = e;
+					this.animationSpeed.value = e;
+				});
+			}
+
 		});
 
 	}
@@ -206,6 +267,14 @@ export default class extends Base {
 
 		this.gridDrawState
 			.uniformFloat("time", elapsed)
+			.uniformFloat("animationSpeed", this.animationSpeed.value)
+			.uniformVector3("color1", vec3.fromValues(this.color1.x, this.color1.y, this.color1.z))
+			.uniformVector3("color2", vec3.fromValues(this.color2.x, this.color2.y, this.color2.z))
+			.uniformVector3("color3", vec3.fromValues(this.color3.x, this.color3.y, this.color3.z))
+			.uniformFloat("noiseSlopeFrequency", this.noiseSlopeFrequency.value)
+			.uniformFloat("maxPeak", this.maxPeak.value)
+			.uniformVector3("peakScale", vec3.fromValues(this.peakScale.x, this.peakScale.y, this.peakScale.z))
+			.uniformVector3("colorNoiseScale", vec3.fromValues(this.colorNoiseScale.x, this.colorNoiseScale.y, this.colorNoiseScale.z))
 			.uniformVector2("resolution", vec2.fromValues(this.canvas.width, this.canvas.height))
 			.setViewport(0, 0, this.canvas.width, this.canvas.height)
 			.draw();
