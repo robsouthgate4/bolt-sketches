@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { BACK, CameraOrtho, CameraPersp, DrawSet, FBO, FRONT, LINES, LINE_LOOP, LINE_STRIP, Mesh, NONE, ONE_MINUS_SRC_ALPHA, POINTS, Program, SRC_ALPHA, Texture2D, TRIANGLES } from "@/webgl/libs/bolt";
+import Bolt, { CameraOrtho, DrawSet, Mesh, ONE_MINUS_SRC_ALPHA, Program, SRC_ALPHA, TRIANGLES } from "@/webgl/libs/bolt";
 
 import normalVertex from "./shaders/normal/normal.vert";
 import normalFragment from "./shaders/normal/normal.frag";
