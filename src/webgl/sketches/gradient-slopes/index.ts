@@ -37,14 +37,14 @@ export default class extends Base {
 	eventListeners = EventListeners.getInstance();
 	ray: Ray;
 	frustumSize = 1;
-	peakScale = new EaseVec3(config.peakScale.value.x, config.peakScale.value.y, config.peakScale.value.z, 0.1);
-	colorNoiseScale = new EaseVec3(config.colorNoiseScale.value.x, config.colorNoiseScale.value.y, config.colorNoiseScale.value.z, 0.1);
 	noiseSlopeFrequency = new EaseNumber(config.noiseSlopeFrequency.value, 0.1);
 	maxPeak = new EaseNumber(config.maxPeak.value, 0.1);
+	animationSpeed = new EaseNumber(config.animationSpeed.value, 0.2);
+	peakScale = new EaseVec3(config.peakScale.value.x, config.peakScale.value.y, config.peakScale.value.z, 0.1);
+	colorNoiseScale = new EaseVec3(config.colorNoiseScale.value.x, config.colorNoiseScale.value.y, config.colorNoiseScale.value.z, 0.1);
 	color1 = new EaseVec3(...normalizeColor(hexToRgb(config.color1.value)), 0.1);
 	color2 = new EaseVec3(...normalizeColor(hexToRgb(config.color2.value)), 0.1);
 	color3 = new EaseVec3(...normalizeColor(hexToRgb(config.color3.value)), 0.1);
-	animationSpeed = new EaseNumber(config.animationSpeed.value, 0.2);
 
 	constructor() {
 
@@ -70,10 +70,56 @@ export default class extends Base {
 		this.gl = this.bolt.getContext();
 		this.bolt.enableAlpha();
 
+		this._createHTML();
 		this.initScene();
 		this.initSketch();
 		this.initGUI();
 		this.initListeners();
+
+	}
+
+	_createHTML() {
+
+		const canvas1 = document.createElement("canvas");
+		Object.assign(canvas1.style, {
+			width: "100%",
+			height: "100%"
+		});
+
+		const div1 = document.createElement("div");
+		div1.appendChild(canvas1);
+
+		Object.assign(div1.style, {
+			position: "absolute",
+			top: "50%",
+			left: "15%",
+			width: "500px",
+			height: "500px",
+			transform: "translate(0, -50%)",
+			outline: "1px solid black"
+		});
+		document.body.appendChild(div1);
+
+		const canvas2 = document.createElement("canvas");
+		Object.assign(canvas2.style, {
+			width: "100%",
+			height: "100%"
+		});
+
+		const div2 = document.createElement("div");
+		div2.appendChild(canvas2);
+
+		Object.assign(div2.style, {
+			position: "absolute",
+			top: "50%",
+			right: "15%",
+			width: "500px",
+			height: "500px",
+			transform: "translate(0, -50%)",
+			outline: "1px solid black"
+		});
+
+		document.body.appendChild(div2);
 
 	}
 
@@ -135,8 +181,6 @@ export default class extends Base {
 		this.assetsLoaded = true;
 
 		const p = new Program(normalVertex, normalFragment);
-		p.transparent = true;
-		p.blendFunction = { src: SRC_ALPHA, dst: ONE_MINUS_SRC_ALPHA };
 
 		const m = plane.setDrawType(TRIANGLES);
 		const gridDrawSet = new DrawSet(m, p);
