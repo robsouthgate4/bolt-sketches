@@ -102,6 +102,8 @@ void main() {
 
     gl_PointSize *= ( scale / - mvPosition.z );
 
+    gl_PointSize *= parabola( lifeNormalised, 1.0 );
+
     vec3 rotatedNormal = aNormal;
     rotatedNormal = mat3( rotation3d( vec3( 1.0, 0.0, 0.0 ), PI * 0.5) ) * rotatedNormal;
 

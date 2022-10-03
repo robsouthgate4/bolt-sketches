@@ -176,12 +176,12 @@ export default class extends Base {
 
 
 		// check if particle count is in local storage
-		if (localStorage.getItem("particleCount") !== null) {
+		// if (localStorage.getItem("particleCount") !== null) {
 
-			this.instanceCount = parseInt(localStorage.getItem("particleCount") as string);
-			this.config.particleCount = this.instanceCount;
+		// 	this.instanceCount = parseInt(localStorage.getItem("particleCount") as string);
+		// 	this.config.particleCount = this.instanceCount;
 
-		}
+		// }
 
 		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
 

@@ -175,14 +175,14 @@ void main() {
 
   float life = oldLifeTime;
 
-  //life -= particleLifeRate;
+  life -= particleLifeRate;
 
-  // if(life < 0.00001) {
+  if(life < 0.00001) {
 
-  //   pos = initPosition;
-  //   life = initLife;
+    pos = initPosition;
+    life = initLife;
 
-  // }
+  }
 
   newPosition = pos;
   newVelocity = vel;

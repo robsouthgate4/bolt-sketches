@@ -9,6 +9,7 @@ import Node from "./Node";
 import DrawSet from "./DrawSet";
 import RBO from "./RBO";
 import Program from "./Program";
+import Texture from "./Texture";
 import Texture2D from "./Texture2D";
 import Texture3D from "./Texture3D";
 import TextureCube from "./TextureCube";
@@ -32,6 +33,7 @@ export {
 	DrawSet,
 	RBO,
 	Program,
+	Texture,
 	Texture2D,
 	Texture3D,
 	TextureCube,
