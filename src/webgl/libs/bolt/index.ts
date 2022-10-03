@@ -4,14 +4,12 @@ import Camera from "./Camera";
 import CameraPersp from "./CameraPersp";
 import CameraOrtho from "./CameraOrtho";
 import FBO from "./FBO";
-import FBOCube from "./FBOCube";
 import Node from "./Node";
 import DrawSet from "./DrawSet";
 import RBO from "./RBO";
 import Program from "./Program";
 import Texture from "./Texture";
 import Texture2D from "./Texture2D";
-import Texture3D from "./Texture3D";
 import TextureCube from "./TextureCube";
 import Transform from "./Transform";
 import VAO from "./VAO";
@@ -28,14 +26,12 @@ export {
 	CameraPersp,
 	CameraOrtho,
 	FBO,
-	FBOCube,
 	Node,
 	DrawSet,
 	RBO,
 	Program,
 	Texture,
 	Texture2D,
-	Texture3D,
 	TextureCube,
 	Transform,
 	VAO,
