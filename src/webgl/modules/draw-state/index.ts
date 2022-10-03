@@ -180,6 +180,14 @@ export default class DrawState {
 
 	}
 
+	setScissor(offsetX: number, offsetY: number, width: number, height: number) {
+
+		this._bolt.scissor(offsetX, offsetY, width, height);
+
+		return this;
+
+	}
+
 	setViewport(offsetX: number, offsetY: number, width: number, height: number) {
 
 		this._viewport = { offsetX, offsetY, width, height };

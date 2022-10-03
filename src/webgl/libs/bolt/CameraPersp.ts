@@ -37,7 +37,10 @@ export default class CameraPersp extends Camera {
 		this.transform.lookAt( target );
 
 	}
-
+	/**
+	 * Updates the camera projection matrix
+	 * @param  {number} aspect The aspect ratio of the camera
+	 */
 	updateProjection( aspect: number ) {
 
 		mat4.perspective(

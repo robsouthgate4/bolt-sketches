@@ -1,7 +1,7 @@
 import { vec3 } from "gl-matrix";
 
 // catmull-rom spline interpolation TODO: split to scalars that can combine to vectors
-const catmullRomInterpolation = (p0: vec3, p1: vec3, p2: vec3, p3: vec3, t: number): vec3 => {
+export const catmullRomInterpolation = (p0: vec3, p1: vec3, p2: vec3, p3: vec3, t: number): vec3 => {
 
 	// vec2 m1 = (1.0f - tension) *
 	// 	(p2 - p1 + t12 * ((p1 - p0) / t01 - (p2 - p0) / (t01 + t12)));

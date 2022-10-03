@@ -413,7 +413,7 @@ export default class extends Base {
 	resize() {
 
 
-		this.bolt.resizeFullScreen();
+		this.bolt.resizeCanvasToDisplay();
 		this.camera.updateProjection(this.canvas.width / this.canvas.height);
 
 	}

@@ -6,7 +6,7 @@ import Camera from "./Camera";
 import DrawSet from "./DrawSet";
 import Node from "./Node";
 import { BACK, BLEND, CULL_FACE, DEPTH_TEST, NONE, ONE, ONE_MINUS_SRC_ALPHA, SRC_ALPHA } from "./Constants";
-import { vec3 } from "gl-matrix";
+import { vec2, vec3 } from "gl-matrix";
 import { BoltParams, Viewport } from "./Types";
 
 export default class Bolt {
@@ -77,6 +77,13 @@ export default class Bolt {
 
 	}
 
+	scissor(x: number, y: number, w: number, h: number) {
+
+		this._gl.scissor(x, y, w, h);
+
+	}
+
+
 	/**
 	 * Set gl viewport offset and dimensions
 	 * @param  {number} x offset x
@@ -137,6 +144,9 @@ export default class Bolt {
 
 	}
 
+	/**
+	 * @param  {number} face face to cull
+	 */
 	cullFace(face: number) {
 
 		this._gl.cullFace(face);
@@ -156,6 +166,24 @@ export default class Bolt {
 	}
 
 	/**
+	 * enable scissor test
+	 */
+	enableScissor() {
+
+		this._gl.enable(this._gl.SCISSOR_TEST);
+
+	}
+
+	/**
+	 * disable scissor test
+	 */
+	disableScissor() {
+
+		this._gl.disable(this._gl.SCISSOR_TEST);
+
+	}
+
+	/**
 	 * Returns gl context
 	 */
 	getContext() {
@@ -168,24 +196,33 @@ export default class Bolt {
 	 * Resizes the canvas to fit full screen
 	 * Updates the currently bound camera perspective
 	 */
-	resizeFullScreen() {
+	resizeCanvasToDisplay(canvas?: HTMLCanvasElement) {
+
+		let c = canvas || this._gl.canvas;
 
 		const dpi = Math.min(this._dpi, window.devicePixelRatio || 1);
 
-		const displayWidth = this._gl.canvas.clientWidth * dpi;
-		const displayHeight = this._gl.canvas.clientHeight * dpi;
+		const displayWidth = c.clientWidth * dpi;
+		const displayHeight = c.clientHeight * dpi;
 
 		// Check if the this.gl.canvas is not the same size.
 		const needResize =
-			this._gl.canvas.width !== displayWidth ||
-			this._gl.canvas.height !== displayHeight;
+			c.width !== displayWidth ||
+			c.height !== displayHeight;
 
 		if (needResize) {
 
-			this._gl.canvas.width = displayWidth;
-			this._gl.canvas.height = displayHeight;
+			c.width = displayWidth;
+			c.height = displayHeight;
 
 		}
+
+	}
+
+	resizeCanvasToSize( size: vec2 ) {
+
+		this._gl.canvas.width = size[0] * this._dpi;
+		this._gl.canvas.height = size[1] * this._dpi;
 
 	}
 

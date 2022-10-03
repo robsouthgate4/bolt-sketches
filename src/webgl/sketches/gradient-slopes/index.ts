@@ -21,9 +21,16 @@ import GLTFLoader from "@/webgl/modules/gltf-loader";
 import { hexToRgb, normalizeColor } from "@/utils";
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
 
+interface DrawCall {
+	ctx: CanvasRenderingContext2D,
+	element: HTMLElement,
+	drawState: DrawState,
+	timeOffset: number
+}
+
 export default class extends Base {
 
-	canvas: HTMLCanvasElement;
+	offscreenCanvas: HTMLCanvasElement;
 	gl: WebGL2RenderingContext;
 	camera!: CameraOrtho;
 	assetsLoaded!: boolean;
@@ -45,6 +52,7 @@ export default class extends Base {
 	color1 = new EaseVec3(...normalizeColor(hexToRgb(config.color1.value)), 0.1);
 	color2 = new EaseVec3(...normalizeColor(hexToRgb(config.color2.value)), 0.1);
 	color3 = new EaseVec3(...normalizeColor(hexToRgb(config.color3.value)), 0.1);
+	drawCalls: DrawCall[] = [];
 
 	constructor() {
 
@@ -55,74 +63,28 @@ export default class extends Base {
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
 
-		this.canvas = <HTMLCanvasElement>document.getElementById("experience");
-		this.canvas.width = this.width;
-		this.canvas.height = this.height;
+		this.offscreenCanvas = <HTMLCanvasElement>document.createElement("canvas");
+		this.offscreenCanvas.width = this.width;
+		this.offscreenCanvas.height = this.height;
 
 		// initialize bolt
 		this.bolt = Bolt.getInstance();
-		this.bolt.init(this.canvas, {
+		this.bolt.init(this.offscreenCanvas, {
 			antialias: true,
 			dpi: Math.min(2, window.devicePixelRatio),
 			powerPreference: "high-performance",
 		});
 
-		this.gl = this.bolt.getContext();
-		this.bolt.enableAlpha();
+		this.bolt.enableScissor();
 
-		this._createHTML();
+		this.gl = this.bolt.getContext();
+
 		this.initScene();
 		this.initSketch();
 		this.initGUI();
 		this.initListeners();
 
 	}
-
-	_createHTML() {
-
-		const canvas1 = document.createElement("canvas");
-		Object.assign(canvas1.style, {
-			width: "100%",
-			height: "100%"
-		});
-
-		const div1 = document.createElement("div");
-		div1.appendChild(canvas1);
-
-		Object.assign(div1.style, {
-			position: "absolute",
-			top: "50%",
-			left: "15%",
-			width: "500px",
-			height: "500px",
-			transform: "translate(0, -50%)",
-			outline: "1px solid black"
-		});
-		document.body.appendChild(div1);
-
-		const canvas2 = document.createElement("canvas");
-		Object.assign(canvas2.style, {
-			width: "100%",
-			height: "100%"
-		});
-
-		const div2 = document.createElement("div");
-		div2.appendChild(canvas2);
-
-		Object.assign(div2.style, {
-			position: "absolute",
-			top: "50%",
-			right: "15%",
-			width: "500px",
-			height: "500px",
-			transform: "translate(0, -50%)",
-			outline: "1px solid black"
-		});
-
-		document.body.appendChild(div2);
-
-	}
-
 	initListeners() {
 
 		this.eventListeners.listen(GL_TOUCH_MOVE_TOPIC, (e: any) => {
@@ -163,7 +125,7 @@ export default class extends Base {
 		});
 
 		this.bolt.setCamera(this.camera);
-		this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
+		this.bolt.setViewPort(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
 		this.bolt.enableDepth();
 
 		this.resize();
@@ -180,16 +142,94 @@ export default class extends Base {
 
 		this.assetsLoaded = true;
 
+		const canvas1 = document.createElement("canvas");
+		const canvas1ctx = canvas1.getContext("2d")!;
+
+		Object.assign(canvas1.style, {
+			width: "100%",
+			height: "100%"
+		});
+
+		const div1 = document.createElement("div");
+		div1.appendChild(canvas1);
+
+		Object.assign(div1.style, {
+			position: "absolute",
+			top: "50%",
+			left: "15%",
+			width: "500px",
+			height: "500px",
+			transform: "translate(0, -50%)",
+			outline: "1px solid black"
+		});
+
+		document.body.appendChild(div1);
+
 		const p = new Program(normalVertex, normalFragment);
 
 		const m = plane.setDrawType(TRIANGLES);
-		const gridDrawSet = new DrawSet(m, p);
-		gridDrawSet.transform.rotateX(Math.PI * 0.82);
+		const gridDrawSet1 = new DrawSet(m, p);
+		gridDrawSet1.transform.rotateX(Math.PI * 0.82);
 
-		this.gridDrawState = new DrawState(this.bolt)
-			.setDrawSet(gridDrawSet)
+		const p2 = new Program(normalVertex, normalFragment);
+		const gridDrawSet2 = new DrawSet(m, p2);
+		gridDrawSet2.transform.rotateX(Math.PI * 0.82);
+
+		const c = normalizeColor([180, 228, 255]);
+		const color1 = vec3.fromValues(c[0], c[1], c[2]);
+
+		const drawState1 = new DrawState(this.bolt)
+			.setDrawSet(gridDrawSet2)
 			.clear(0, 0, 0, 1)
-			.setViewport(0, 0, this.canvas.width, this.canvas.height)
+			.uniformVector3("color1", vec3.fromValues(color1[0], color1[1], color1[2]))
+			.uniformVector3("color2", vec3.fromValues(this.color2.x, this.color2.y, this.color2.z))
+			.uniformVector3("color3", vec3.fromValues(this.color3.x, this.color3.y, this.color3.z))
+			.setViewport(0, 0, canvas1.width, canvas1.height);
+
+		this.drawCalls.push({
+			ctx: canvas1ctx,
+			element: div1,
+			drawState: drawState1,
+			timeOffset: 3
+		});
+
+		const canvas2 = document.createElement("canvas");
+		const canvas2ctx = canvas2.getContext("2d")!;
+
+		Object.assign(canvas2.style, {
+			width: "100%",
+			height: "100%"
+		});
+
+		const div2 = document.createElement("div");
+		div2.appendChild(canvas2);
+
+		Object.assign(div2.style, {
+			position: "absolute",
+			top: "50%",
+			left: "50%",
+			width: "500px",
+			height: "500px",
+			transform: "translate(0, -50%)",
+			outline: "1px solid black"
+		});
+
+		document.body.appendChild(div2);
+
+		const drawState2 = new DrawState(this.bolt)
+			.setDrawSet(gridDrawSet1)
+			.clear(0, 0, 0, 1)
+			.uniformVector3("color1", vec3.fromValues(this.color1.x, this.color1.y, this.color1.z))
+			.uniformVector3("color2", vec3.fromValues(this.color2.x, this.color2.y, this.color2.z))
+			.uniformVector3("color3", vec3.fromValues(this.color3.x, this.color3.y, this.color3.z))
+			.setViewport(0, 0, canvas1.width, canvas1.height);
+
+		this.drawCalls.push({
+			ctx: canvas2ctx,
+			element: div2,
+			drawState: drawState2,
+			timeOffset: 0
+		});
 
 
 	}
@@ -286,7 +326,7 @@ export default class extends Base {
 
 	resize() {
 
-		this.bolt.resizeFullScreen();
+		this.bolt.resizeCanvasToDisplay();
 
 		const aspect = this.gl.canvas.width / this.gl.canvas.height;
 
@@ -309,19 +349,53 @@ export default class extends Base {
 
 		if (!this.assetsLoaded) return;
 
-		this.gridDrawState
-			.uniformFloat("time", elapsed)
-			.uniformFloat("animationSpeed", this.animationSpeed.value)
-			.uniformVector3("color1", vec3.fromValues(this.color1.x, this.color1.y, this.color1.z))
-			.uniformVector3("color2", vec3.fromValues(this.color2.x, this.color2.y, this.color2.z))
-			.uniformVector3("color3", vec3.fromValues(this.color3.x, this.color3.y, this.color3.z))
-			.uniformFloat("noiseSlopeFrequency", this.noiseSlopeFrequency.value)
-			.uniformFloat("maxPeak", this.maxPeak.value)
-			.uniformVector3("peakScale", vec3.fromValues(this.peakScale.x, this.peakScale.y, this.peakScale.z))
-			.uniformVector3("colorNoiseScale", vec3.fromValues(this.colorNoiseScale.x, this.colorNoiseScale.y, this.colorNoiseScale.z))
-			.uniformVector2("resolution", vec2.fromValues(this.canvas.width, this.canvas.height))
-			.setViewport(0, 0, this.canvas.width, this.canvas.height)
-			.draw();
+		this.drawCalls.forEach((drawCall: DrawCall) => {
+
+			const { drawState, element, ctx, timeOffset } = drawCall;
+
+			const rect = element.getBoundingClientRect();
+			const { width, height } = rect;
+
+			if (ctx.canvas.width !== width || ctx.canvas.height !== height) {
+				ctx.canvas.width = width;
+				ctx.canvas.height = height;
+			}
+
+			this.bolt.resizeCanvasToSize(vec2.fromValues(width, height));
+
+			const gl = this.bolt.getContext();
+
+			const aspect = ctx.canvas.width / ctx.canvas.height;
+
+			this.camera.left = this.frustumSize * aspect / - 2;
+			this.camera.right = this.frustumSize * aspect / 2;
+			this.camera.bottom = - this.frustumSize / 2;
+			this.camera.top = this.frustumSize / 2;
+
+			this.camera.updateProjection();
+
+			drawState
+				.uniformFloat("time", elapsed + timeOffset)
+				.uniformFloat("animationSpeed", this.animationSpeed.value)
+				.uniformFloat("noiseSlopeFrequency", this.noiseSlopeFrequency.value)
+				.uniformFloat("maxPeak", this.maxPeak.value)
+				.uniformVector3("peakScale", vec3.fromValues(this.peakScale.x, this.peakScale.y, this.peakScale.z))
+				.uniformVector3("colorNoiseScale", vec3.fromValues(this.colorNoiseScale.x, this.colorNoiseScale.y, this.colorNoiseScale.z))
+				.uniformVector2("resolution", vec2.fromValues(ctx.canvas.width, ctx.canvas.height))
+				.uniformVector3("color2", vec3.fromValues(this.color2.x, this.color2.y, this.color2.z))
+				.uniformVector3("color3", vec3.fromValues(this.color3.x, this.color3.y, this.color3.z))
+				.setScissor(0, 0, width, height)
+				.setViewport(0, 0, width, height)
+				.draw();
+
+			ctx.globalCompositeOperation = "copy";
+			ctx.drawImage(
+				gl.canvas,
+				0, gl.canvas.height - height, width, height, // src
+				0, 0, width, height // dst
+			);
+
+		});
 
 	}
 
