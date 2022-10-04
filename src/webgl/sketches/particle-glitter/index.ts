@@ -68,8 +68,8 @@ export default class extends Base {
 	repellorTarget = new EaseVec3(0, 0, 0, 0.3);
 	repellorPosition = vec3.create();
 	repellorPositinPrevious = vec3.create();
-	_pointCount = 24;
-	_lineCount = 24;
+	_pointCount = 50;
+	_lineCount = 64;
 	lineDrawState: FBO;
 	lineDrawSet: DrawSet;
 
@@ -188,7 +188,7 @@ export default class extends Base {
 			const p = [];
 
 			for (let i = 0; i < count; i++) {
-				p[i] = vec3.fromValues( (i - count / 2.) * 0.1, Math.sin( i ) * 0.1, 0 );
+				p[i] = vec3.fromValues( (i - count / 2) * 0.02, Math.cos( i * 0.15 ) * 0.1, 0 );
 			}
 
 			return p;
