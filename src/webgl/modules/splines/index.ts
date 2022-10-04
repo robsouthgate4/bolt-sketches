@@ -32,9 +32,9 @@ export const catmullRomInterpolation = (p0: vec3, p1: vec3, p2: vec3, p3: vec3, 
 	m2[2] = (1 - tension) * (p2[2] - p1[2] + t12 * ((p3[2] - p2[2]) / t23 - (p3[2] - p1[2]) / (t12 + t23)));
 
 	const a = vec3.create();
-	a[0] = 2 * (p1[0] - p2[0]) + m1[0] + m2[0]
-	a[1] = 2 * (p1[1] - p2[1]) + m1[1] + m2[1]
-	a[2] = 2 * (p1[2] - p2[2]) + m1[2] + m2[2]
+	a[0] = 2 * (p1[0] - p2[0]) + m1[0] + m2[0];
+	a[1] = 2 * (p1[1] - p2[1]) + m1[1] + m2[1];
+	a[2] = 2 * (p1[2] - p2[2]) + m1[2] + m2[2];
 
 	const b = vec3.create();
 	b[0] = -3 * (p1[0] - p2[0]) - m1[0] - m1[0] - m2[0];

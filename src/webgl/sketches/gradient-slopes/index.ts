@@ -14,7 +14,7 @@ import config from "./config";
 import { GUI } from "lil-gui"
 import EaseNumber from "@/webgl/helpers/EaseNumber";
 import Raycast from "@/webgl/modules/raycast";
-import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
+import EventListeners from "@/webgl/modules/event-listeners";
 import Ray from "@/webgl/modules/raycast/Ray";
 import { GL_RESIZE_TOPIC, GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import GLTFLoader from "@/webgl/modules/gltf-loader";

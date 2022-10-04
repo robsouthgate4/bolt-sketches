@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, Mesh, POINTS, Program, Texture2D, VBO } from "@/webgl/libs/bolt";
+import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, LINES, LINE_STRIP, Mesh, POINTS, Program, Texture2D, VBO } from "@/webgl/libs/bolt";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
@@ -29,8 +29,13 @@ import Sphere from "@/webgl/modules/primitives/Sphere";
 
 import normalVertexShader from "./shaders/normal/normal.vert";
 import normalFragmentShader from "./shaders/normal/normal.frag";
+
+import splineVertexShader from "./shaders/spline/spline.vert";
+import splineFragmentShader from "./shaders/spline/spline.frag";
+
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
 import { getDeviceType } from "@/utils";
+import { catmullRomInterpolation } from "@/webgl/modules/splines";
 
 export default class extends Base {
 
@@ -63,6 +68,10 @@ export default class extends Base {
 	repellorTarget = new EaseVec3(0, 0, 0, 0.3);
 	repellorPosition = vec3.create();
 	repellorPositinPrevious = vec3.create();
+	_pointCount = 24;
+	_lineCount = 24;
+	lineDrawState: FBO;
+	lineDrawSet: DrawSet;
 
 	constructor() {
 
@@ -134,8 +143,8 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues(0, 30, 20),
-			target: vec3.fromValues(0, 1, 0),
+			position: vec3.fromValues(0, 0, 1),
+			target: vec3.fromValues(0, 0, 0),
 		});
 
 		const frustumSize = 20;
@@ -154,11 +163,11 @@ export default class extends Base {
 		mat4.multiply(this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view);
 
 		this.orbit = new Orbit(this.camera, {
-			minRadius: 5,
+			minRadius: 1,
 			maxRadius: 50,
 			minElevation: -Math.PI * 0.5,
 			maxElevation: Math.PI * 0.5,
-			ease: 0.04,
+			ease: 1,
 			zoomSpeed: 0.25,
 			disableOrbit: getDeviceType() === "mobile",
 		});
@@ -168,6 +177,36 @@ export default class extends Base {
 		this.bolt.enableDepth();
 
 		this.resize();
+
+
+
+
+	}
+
+	private createPoints(count: number) {
+
+			const p = [];
+
+			for (let i = 0; i < count; i++) {
+				p[i] = vec3.fromValues( (i - count / 2.) * 0.1, Math.sin( i ) * 0.1, 0 );
+			}
+
+			return p;
+
+	}
+
+	private createSpline(p0: vec3, p1: vec3, p2: vec3, p3: vec3) {
+
+		const curve: vec3[] = [];
+
+		for( let i = 0; i < this._lineCount; i++ ) {
+
+			const b = catmullRomInterpolation( p0, p1, p2, p3, i / this._lineCount );
+			curve[i] = b;
+
+		}
+
+		return curve;
 
 	}
 
@@ -182,6 +221,38 @@ export default class extends Base {
 		// 	this.config.particleCount = this.instanceCount;
 
 		// }
+
+		const spline = [];
+		const points = this.createPoints(this._pointCount);
+
+		for( let i = 0; i < this._pointCount - 3; i++ ) {
+
+			const p = points;
+			spline[i] = this.createSpline( p[i], p[i + 1], p[i + 2], p[i + 3] );
+
+		}
+
+		const flattenedPoints = [];
+
+		for( let i = 0; i < spline.length; i++ ) {
+
+			const segment = spline[i];
+
+			for( let j = 0; j < segment.length; j++ ) {
+
+				const p = segment[j];
+				flattenedPoints.push(p[0], p[1], p[2]);
+
+			}
+
+		}
+
+		const lineMesh = new Mesh({
+			positions: new Float32Array(flattenedPoints)
+		})
+		.setDrawType(LINE_STRIP);
+
+		this.lineDrawSet = new DrawSet(lineMesh, new Program( splineVertexShader, splineFragmentShader ));
 
 		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
 
@@ -364,21 +435,21 @@ export default class extends Base {
 		// 	.setViewport(0, 0, this.depthFBO.width, this.depthFBO.height)
 		// 	.clear(0, 0, 0, 1)
 
-		this.particleDrawState = new DrawState(this.bolt)
-			.setDrawSet(particleDrawSet)
-			.setVbo(velocity1VBO, 3, 6, FLOAT, 0, 0)
-			.setVbo(life1VBO, 1, 4, FLOAT, 0, 0)
-			.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 0)
-			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 0)
-			.uniformTexture("mapDepth", this.depthFBO.depthTexture!)
-			.uniformFloat("shadowStrength", this.config.shadowStrength)
-			.uniformFloat("particleScale", this.config.particleScale)
-			.uniformFloat("colorMode", this.config.colorMode === "light" ? 0 : 1)
-			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
-			.uniformTexture("mapMatcapLight", this.maptcapLight)
-			.uniformTexture("mapMatcapDark", this.maptcapDark)
-			.setViewport(0, 0, this.canvas.width, this.canvas.height)
-			.clear(bg[0], bg[1], bg[2], bg[3])
+		// this.particleDrawState = new DrawState(this.bolt)
+		// 	.setDrawSet(particleDrawSet)
+		// 	.setVbo(velocity1VBO, 3, 6, FLOAT, 0, 0)
+		// 	.setVbo(life1VBO, 1, 4, FLOAT, 0, 0)
+		// 	.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 0)
+		// 	.setVbo(offset1VBO, 3, 2, FLOAT, 0, 0)
+		// 	.uniformTexture("mapDepth", this.depthFBO.depthTexture!)
+		// 	.uniformFloat("shadowStrength", this.config.shadowStrength)
+		// 	.uniformFloat("particleScale", this.config.particleScale)
+		// 	.uniformFloat("colorMode", this.config.colorMode === "light" ? 0 : 1)
+		// 	.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
+		// 	.uniformTexture("mapMatcapLight", this.maptcapLight)
+		// 	.uniformTexture("mapMatcapDark", this.maptcapDark)
+		// 	.setViewport(0, 0, this.canvas.width, this.canvas.height)
+		// 	.clear(bg[0], bg[1], bg[2], bg[3])
 
 
 	}
@@ -448,32 +519,34 @@ export default class extends Base {
 
 		this.orbit.update();
 
-		vec3.set(this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z);
+		// vec3.set(this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z);
 
-		let d = vec3.distance(this.repellorPosition, this.repellorPositinPrevious);
-		d = Math.min(d, 1) * 10;
+		// let d = vec3.distance(this.repellorPosition, this.repellorPositinPrevious);
+		// d = Math.min(d, 1) * 10;
 
-		this.simulationProgram.activate();
-		this.simulationProgram.setFloat("time", elapsed);
-		this.simulationProgram.setVector3("repellorPosition", this.repellorPosition);
-		this.simulationProgram.setFloat("repellorScale", d);
-		this.transformFeedback.compute();
+		// this.simulationProgram.activate();
+		// this.simulationProgram.setFloat("time", elapsed);
+		// this.simulationProgram.setVector3("repellorPosition", this.repellorPosition);
+		// this.simulationProgram.setFloat("repellorScale", d);
+		// this.transformFeedback.compute();
 
-		//this.depthDrawState.draw()
+		// //this.depthDrawState.draw()
 
-		const bgLight = this.config.light.backgroundColor;
-		const bgDark = this.config.dark.backgroundColor;
+		// const bgLight = this.config.light.backgroundColor;
+		// const bgDark = this.config.dark.backgroundColor;
 
-		this.particleDrawState
-			.uniformFloat("colorMode", this.colorEase.value)
-			.clear(
-				bgLight[0] * (1 - this.colorEase.value) + bgDark[0] * (this.colorEase.value),
-				bgLight[1] * (1 - this.colorEase.value) + bgDark[1] * (this.colorEase.value),
-				bgLight[2] * (1 - this.colorEase.value) + bgDark[2] * (this.colorEase.value),
-				bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
-			.draw()
+		this.bolt.draw(this.lineDrawSet);
 
-		vec3.copy(this.repellorPositinPrevious, this.repellorPosition);
+		// this.particleDrawState
+		// 	.uniformFloat("colorMode", this.colorEase.value)
+		// 	.clear(
+		// 		bgLight[0] * (1 - this.colorEase.value) + bgDark[0] * (this.colorEase.value),
+		// 		bgLight[1] * (1 - this.colorEase.value) + bgDark[1] * (this.colorEase.value),
+		// 		bgLight[2] * (1 - this.colorEase.value) + bgDark[2] * (this.colorEase.value),
+		// 		bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
+		// 	.draw()
+
+		//vec3.copy(this.repellorPositinPrevious, this.repellorPosition);
 
 	}
 

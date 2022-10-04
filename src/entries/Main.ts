@@ -1,5 +1,5 @@
 
-import Example from "@/webgl/sketches/gradient-slopes";
+import Example from "@/webgl/sketches/particle-glitter";
 
 export default class Main {
 

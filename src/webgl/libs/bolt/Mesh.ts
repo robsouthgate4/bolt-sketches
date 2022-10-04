@@ -34,6 +34,7 @@ export default class Mesh {
 	private _drawType: number;
 	private _bounds: BoxBounds = { min: vec3.create(), max: vec3.create() };
 	private _isSkinMesh = false;
+	private _lineWidth?: number;
 
 	constructor(geometry?: GeometryBuffers, params?: MeshParams) {
 
@@ -78,6 +79,14 @@ export default class Mesh {
 	setDrawType(type: number) {
 
 		this._drawType = type;
+
+		return this;
+
+	}
+
+	setLineWidth(width: number) {
+
+		this._lineWidth = width;
 
 		return this;
 
@@ -369,6 +378,10 @@ export default class Mesh {
 	draw(program: Program, node?: Node) {
 
 		this._bindTextures(program);
+
+		if(this._lineWidth) {
+			this._gl.lineWidth(this._lineWidth);
+		}
 
 		this._vao.bind();
 
