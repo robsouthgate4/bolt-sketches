@@ -33,9 +33,12 @@ import normalFragmentShader from "./shaders/normal/normal.frag";
 import splineVertexShader from "./shaders/spline/spline.vert";
 import splineFragmentShader from "./shaders/spline/spline.frag";
 
+import pointVertexShader from "./shaders/point/point.vert";
+import pointFragmentShader from "./shaders/point/point.frag";
+
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
 import { getDeviceType } from "@/utils";
-import { catmullRomInterpolation } from "@/webgl/modules/splines";
+import { catmullRomInterpolation, CatmullRom } from "@/webgl/modules/splines";
 
 export default class extends Base {
 
@@ -68,10 +71,12 @@ export default class extends Base {
 	repellorTarget = new EaseVec3(0, 0, 0, 0.3);
 	repellorPosition = vec3.create();
 	repellorPositinPrevious = vec3.create();
-	_pointCount = 50;
-	_lineCount = 64;
+	pointCount = 20;
+	lineCount = 24;
 	lineDrawState: FBO;
 	lineDrawSet: DrawSet;
+	pointDrawSet: DrawSet;
+	catmullRom: CatmullRom;
 
 	constructor() {
 
@@ -163,7 +168,7 @@ export default class extends Base {
 		mat4.multiply(this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view);
 
 		this.orbit = new Orbit(this.camera, {
-			minRadius: 1,
+			minRadius: 0.3,
 			maxRadius: 50,
 			minElevation: -Math.PI * 0.5,
 			maxElevation: Math.PI * 0.5,
@@ -188,7 +193,7 @@ export default class extends Base {
 			const p = [];
 
 			for (let i = 0; i < count; i++) {
-				p[i] = vec3.fromValues( (i - count / 2) * 0.02, Math.cos( i * 0.15 ) * 0.1, 0 );
+				p[i] = vec3.fromValues( (i - count / 2) * 0.05, Math.cos( i * 0.7 ) * 0.1, -Math.sin( i * 0.7 ) * 0.1 );
 			}
 
 			return p;
@@ -199,9 +204,9 @@ export default class extends Base {
 
 		const curve: vec3[] = [];
 
-		for( let i = 0; i < this._lineCount; i++ ) {
+		for( let i = 0; i < this.lineCount; i++ ) {
 
-			const b = catmullRomInterpolation( p0, p1, p2, p3, i / this._lineCount );
+			const b = catmullRomInterpolation( p0, p1, p2, p3, i / this.lineCount );
 			curve[i] = b;
 
 		}
@@ -223,14 +228,21 @@ export default class extends Base {
 		// }
 
 		const spline = [];
-		const points = this.createPoints(this._pointCount);
+		const points = this.createPoints(this.pointCount);
 
-		for( let i = 0; i < this._pointCount - 3; i++ ) {
+		this.catmullRom = new CatmullRom(points);
+
+		const pointAtTime = this.catmullRom.getPoint(0.5);
+
+		console.log(pointAtTime);
+
+		for( let i = 0; i < this.pointCount - 3; i++ ) {
 
 			const p = points;
 			spline[i] = this.createSpline( p[i], p[i + 1], p[i + 2], p[i + 3] );
 
 		}
+
 
 		const flattenedPoints = [];
 
@@ -247,11 +259,16 @@ export default class extends Base {
 
 		}
 
+
+		const pointSplineMesh = new Mesh({
+			positions: pointAtTime,
+		}).setDrawType(POINTS);
+
 		const lineMesh = new Mesh({
 			positions: new Float32Array(flattenedPoints)
-		})
-		.setDrawType(LINE_STRIP);
+		}).setDrawType(LINE_STRIP);
 
+		this.pointDrawSet = new DrawSet(pointSplineMesh, new Program(pointVertexShader, pointFragmentShader));
 		this.lineDrawSet = new DrawSet(lineMesh, new Program( splineVertexShader, splineFragmentShader ));
 
 		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
@@ -536,6 +553,7 @@ export default class extends Base {
 		// const bgDark = this.config.dark.backgroundColor;
 
 		this.bolt.draw(this.lineDrawSet);
+		this.bolt.draw(this.pointDrawSet);
 
 		// this.particleDrawState
 		// 	.uniformFloat("colorMode", this.colorEase.value)

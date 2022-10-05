@@ -14,7 +14,7 @@ export const catmullRomInterpolation = (p0: vec3, p1: vec3, p2: vec3, p3: vec3, 
 	// vec2 c = m1;
 	// vec2 d = p1;
 
-	const alpha = 1.0;
+	const alpha = 0.0;
 	const tension = 0.0;
 
 	const t01 = Math.pow(vec3.distance(p0, p1), alpha);
@@ -53,5 +53,38 @@ export const catmullRomInterpolation = (p0: vec3, p1: vec3, p2: vec3, p3: vec3, 
 	vec3.add(out, out, d);
 
 	return out;
+
+}
+
+export class CatmullRom {
+
+	private _points: vec3[] = [];
+
+	constructor(points: vec3[]) {
+		this._points = points;
+	}
+
+	addPoint(point: vec3) {
+		this._points.push(point);
+	}
+
+	getPoint(t: number): vec3 {
+
+		const p = this._points;
+
+		const l = p.length - 1;
+		const lt = l * t;
+
+		const i = Math.floor(lt);
+		const t1 = lt - i;
+
+		const i0 = Math.max(0, i - 1);
+		const i1 = Math.max(0, i);
+		const i2 = Math.min(l, i + 1);
+		const i3 = Math.min(l, i + 2);
+
+		return catmullRomInterpolation(p[i0], p[i1], p[i2], p[i3], t1);
+
+	}
 
 }
