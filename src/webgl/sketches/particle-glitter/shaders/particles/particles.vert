@@ -8,8 +8,9 @@ layout(location = 2) in vec3 aOffset;
 layout(location = 3) in vec2 aUv;
 layout(location = 4) in float aLifeTime;
 layout(location = 5) in float aInitLifeTime;
-layout(location = 7) in float aScale;
 layout(location = 6) in vec3 aVelocity;
+layout(location = 7) in float aScale;
+layout(location = 8) in vec3 aRandom;
 
 out vec3 Normal;
 out vec2 Uv;
@@ -23,6 +24,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 lightSpaceMatrix;
 uniform float particleScale;
+uniform float time;
 
 #define PI 3.14159265359
 
@@ -81,7 +83,11 @@ void main() {
 
     mat4 lookAt        = mat4( calcLookAtMatrix( aVelocity, 0.0 ) );
 
-    vec3 transformed   = pos;
+    vec3 transformed  = pos;
+
+    transformed.y += aRandom.x * 0.05 * -cos( transformed.x + time + aRandom.x);
+    transformed.x += aRandom.y * 0.08 * sin(time + aRandom.x);
+    transformed.z += aRandom.z * 0.08;
 
    // vec4 worldPosition = model * vec4( transformed, 1.0 );
 
@@ -96,13 +102,13 @@ void main() {
 
     gl_Position = projection * mvPosition;
 
-    float scale = 12.0 * aScale;
+    float scale = aScale;
 
-    gl_PointSize = scale;
+    gl_PointSize = scale * particleScale;
 
     gl_PointSize *= ( scale / - mvPosition.z );
 
-    gl_PointSize *= parabola( lifeNormalised, 1.0 );
+    //gl_PointSize *= parabola( lifeNormalised, 1.0 );
 
     vec3 rotatedNormal = aNormal;
     rotatedNormal = mat3( rotation3d( vec3( 1.0, 0.0, 0.0 ), PI * 0.5) ) * rotatedNormal;

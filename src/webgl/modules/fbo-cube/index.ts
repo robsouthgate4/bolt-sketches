@@ -9,13 +9,13 @@ export default class FBOCube {
 	private _frameBuffer: WebGLFramebuffer;
 	private _gl: WebGL2RenderingContext;
 
-	constructor({
+	constructor( {
 		width = 256,
 		height = 256,
-	} = {}) {
+	} = {} ) {
 
 		this._gl = Bolt.getInstance().getContext();
-		this._targetTexture = new TextureCube({
+		this._targetTexture = new TextureCube( {
 			width,
 			height,
 			generateMipmaps: true,
@@ -24,14 +24,14 @@ export default class FBOCube {
 			flipY: false,
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
-		});
+		} );
 		this._targetTexture.bind();
 
-		this._frameBuffer = <WebGLFramebuffer>this._gl.createFramebuffer();
+		this._frameBuffer = <WebGLFramebuffer> this._gl.createFramebuffer();
 
 		this.bind();
 
-		for (var side = 0; side < 6; side++) {
+		for ( var side = 0; side < 6; side ++ ) {
 
 			this._gl.framebufferTexture2D(
 				FRAMEBUFFER,
@@ -47,7 +47,7 @@ export default class FBOCube {
 
 	}
 
-	setActiveSide(side: number) {
+	setActiveSide( side: number ) {
 
 		this._gl.framebufferTexture2D(
 			FRAMEBUFFER,
@@ -61,13 +61,13 @@ export default class FBOCube {
 
 	bind() {
 
-		this._gl.bindFramebuffer(FRAMEBUFFER, this._frameBuffer);
+		this._gl.bindFramebuffer( FRAMEBUFFER, this._frameBuffer );
 
 	}
 
 	unbind() {
 
-		this._gl.bindFramebuffer(FRAMEBUFFER, null);
+		this._gl.bindFramebuffer( FRAMEBUFFER, null );
 
 	}
 
@@ -76,7 +76,7 @@ export default class FBOCube {
 		return this._width;
 
 	}
-	public set width(value) {
+	public set width( value ) {
 
 		this._width = value;
 
@@ -86,7 +86,7 @@ export default class FBOCube {
 		return this._height;
 
 	}
-	public set height(value) {
+	public set height( value ) {
 
 		this._height = value;
 

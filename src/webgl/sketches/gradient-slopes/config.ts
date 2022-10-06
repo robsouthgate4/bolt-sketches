@@ -33,4 +33,4 @@ export default {
 	animationSpeed: {
 		value: 0.2
 	}
-}
+};

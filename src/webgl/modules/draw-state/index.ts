@@ -13,20 +13,21 @@ export default class DrawState {
 	private _clearColor!: { r: number; g: number; b: number; a: number; };
 	private _cullFace = NONE;
 
-	constructor(bolt: Bolt) {
+	constructor( bolt: Bolt ) {
 
 		this._bolt = bolt;
 
 	}
 
-	setMesh(mesh: Mesh) {
+	setMesh( mesh: Mesh ) {
 
 		this._mesh = mesh;
 
 		return this;
+
 	}
 
-	setDrawSet(drawSet: DrawSet) {
+	setDrawSet( drawSet: DrawSet ) {
 
 		this._drawSet = drawSet;
 
@@ -34,96 +35,96 @@ export default class DrawState {
 
 	}
 
-	uniformFloat(uniform: string, value: number) {
+	uniformFloat( uniform: string, value: number ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setFloat(uniform, value);
+		this._drawSet && this._drawSet.program.setFloat( uniform, value );
 
 		return this;
 
 	}
 
-	uniformVector2(uniform: string, value: vec2) {
+	uniformVector2( uniform: string, value: vec2 ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setVector2(uniform, value);
+		this._drawSet && this._drawSet.program.setVector2( uniform, value );
 
 		return this;
 
 	}
 
-	uniformVector3(uniform: string, value: vec3) {
+	uniformVector3( uniform: string, value: vec3 ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setVector3(uniform, value);
+		this._drawSet && this._drawSet.program.setVector3( uniform, value );
 
 		return this;
 
 	}
 
-	uniformVector4(uniform: string, value: vec4) {
+	uniformVector4( uniform: string, value: vec4 ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setVector4(uniform, value);
+		this._drawSet && this._drawSet.program.setVector4( uniform, value );
 
 		return this;
 
 	}
 
-	uniformMatrix3(uniform: string, value: mat3) {
+	uniformMatrix3( uniform: string, value: mat3 ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setMatrix3(uniform, value);
+		this._drawSet && this._drawSet.program.setMatrix3( uniform, value );
 
 		return this;
 
 	}
 
-	uniformMatrix4(uniform: string, value: mat4) {
+	uniformMatrix4( uniform: string, value: mat4 ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setMatrix4(uniform, value);
+		this._drawSet && this._drawSet.program.setMatrix4( uniform, value );
 
 		return this;
 
 	}
 
-	uniformInt(uniform: string, value: number) {
+	uniformInt( uniform: string, value: number ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setInt(uniform, value);
+		this._drawSet && this._drawSet.program.setInt( uniform, value );
 
 		return this;
 
 	}
 
-	uniformBoolean(uniform: string, value: number) {
+	uniformBoolean( uniform: string, value: number ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setBool(uniform, value);
+		this._drawSet && this._drawSet.program.setBool( uniform, value );
 
 		return this;
 
 	}
 
-	uniformTexture(uniform: string, texture: TextureCube | Texture2D) {
+	uniformTexture( uniform: string, texture: TextureCube | Texture2D ) {
 
 		this._drawSet?.program.activate();
-		this._drawSet && this._drawSet.program.setTexture(uniform, texture);
+		this._drawSet && this._drawSet.program.setTexture( uniform, texture );
 
 		return this;
 
 	}
 
-	setAttribute(buffer: TypedArray, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
+	setAttribute( buffer: TypedArray, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number ) {
 
-		if (this._drawSet) {
+		if ( this._drawSet ) {
 
-			this._drawSet.mesh.setAttribute(buffer, size, layoutID, type, offset, divisor);
+			this._drawSet.mesh.setAttribute( buffer, size, layoutID, type, offset, divisor );
 
 		} else {
 
-			console.error("No draw set provided");
+			console.error( "No draw set provided" );
 
 		}
 
@@ -131,7 +132,7 @@ export default class DrawState {
 
 	}
 
-	setInstanceCount(count: number) {
+	setInstanceCount( count: number ) {
 
 		this._instanceCount = count;
 
@@ -140,15 +141,15 @@ export default class DrawState {
 	}
 
 
-	setVbo(vbo: VBO, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number) {
+	setVbo( vbo: VBO, size: number, layoutID: number | AttribPointer, type: number, offset: number, divisor: number ) {
 
-		if (this._drawSet) {
+		if ( this._drawSet ) {
 
-			this._drawSet.mesh.setVBO(vbo, size, layoutID, type, offset, divisor);
+			this._drawSet.mesh.setVBO( vbo, size, layoutID, type, offset, divisor );
 
 		} else {
 
-			console.error("No draw set provided");
+			console.error( "No draw set provided" );
 
 		}
 
@@ -156,7 +157,7 @@ export default class DrawState {
 
 	}
 
-	setFbo(fbo: FBO) {
+	setFbo( fbo: FBO ) {
 
 		this._fbo = fbo;
 
@@ -164,7 +165,7 @@ export default class DrawState {
 
 	}
 
-	clear(r: number, g: number, b: number, a: number) {
+	clear( r: number, g: number, b: number, a: number ) {
 
 		this._clearColor = { r, g, b, a };
 
@@ -172,7 +173,7 @@ export default class DrawState {
 
 	}
 
-	setCullFace(face: number) {
+	setCullFace( face: number ) {
 
 		this._cullFace = face;
 
@@ -180,15 +181,15 @@ export default class DrawState {
 
 	}
 
-	setScissor(offsetX: number, offsetY: number, width: number, height: number) {
+	setScissor( offsetX: number, offsetY: number, width: number, height: number ) {
 
-		this._bolt.scissor(offsetX, offsetY, width, height);
+		this._bolt.scissor( offsetX, offsetY, width, height );
 
 		return this;
 
 	}
 
-	setViewport(offsetX: number, offsetY: number, width: number, height: number) {
+	setViewport( offsetX: number, offsetY: number, width: number, height: number ) {
 
 		this._viewport = { offsetX, offsetY, width, height };
 
@@ -198,37 +199,39 @@ export default class DrawState {
 
 	draw() {
 
-		if (this._fbo) {
+		if ( this._fbo ) {
 
 			this._fbo.bind();
 
 		}
 
-		this._viewport && this._bolt.setViewPort(this._viewport.offsetX, this._viewport.offsetY, this._viewport.width, this._viewport.height);
+		this._viewport && this._bolt.setViewPort( this._viewport.offsetX, this._viewport.offsetY, this._viewport.width, this._viewport.height );
 
-		this._clearColor && this._bolt.clear(this._clearColor.r, this._clearColor.g, this._clearColor.b, this._clearColor.a);
+		this._clearColor && this._bolt.clear( this._clearColor.r, this._clearColor.g, this._clearColor.b, this._clearColor.a );
 
-		if (this._cullFace !== NONE) {
+		if ( this._cullFace !== NONE ) {
 
 			this._bolt.enableCullFace();
-			this._bolt.cullFace(this._cullFace);
+			this._bolt.cullFace( this._cullFace );
 
 		}
 
-		if (this._drawSet) {
+		if ( this._drawSet ) {
 
-			this._bolt.draw(this._drawSet);
+			this._bolt.draw( this._drawSet );
 
 		}
 
-		if (this._fbo) {
+		if ( this._fbo ) {
 
 			this._fbo.unbind();
 
 		}
 
-		if (this._cullFace !== NONE) {
+		if ( this._cullFace !== NONE ) {
+
 			this._bolt.disableCullFace();
+
 		}
 
 		return this;
@@ -240,7 +243,7 @@ export default class DrawState {
 		return this._drawSet;
 
 	}
-	public set drawSet(value: DrawSet | undefined) {
+	public set drawSet( value: DrawSet | undefined ) {
 
 		this._drawSet = value;
 

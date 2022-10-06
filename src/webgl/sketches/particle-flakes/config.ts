@@ -8,9 +8,9 @@ export default {
 	colorMode: "dark",
 	curlStrength: 1,
 	light: {
-		backgroundColor: [0.81, 0.81, 0.81, 1],
+		backgroundColor: [ 0.81, 0.81, 0.81, 1 ],
 	},
 	dark: {
-		backgroundColor: [0, 0, 0, 1],
+		backgroundColor: [ 0, 0, 0, 1 ],
 	},
-}
+};

@@ -30,7 +30,7 @@ export default class Texture3D extends Texture {
 		} = {}
 	) {
 
-		super({
+		super( {
 			imagePath,
 			wrapS,
 			wrapT,
@@ -45,7 +45,7 @@ export default class Texture3D extends Texture {
 			generateMipmaps,
 			flipY,
 			target,
-		});
+		} );
 
 		this._depth = depth;
 		this._baseLevel = baseLevel;
@@ -57,7 +57,7 @@ export default class Texture3D extends Texture {
 
 	_init() {
 
-		this._texture = <WebGLTexture>this._gl.createTexture();
+		this._texture = <WebGLTexture> this._gl.createTexture();
 		this.bind();
 
 		this._gl.texImage3D(
@@ -78,7 +78,7 @@ export default class Texture3D extends Texture {
 	}
 
 
-	resize(width: number, height: number, depth: number) {
+	resize( width: number, height: number, depth: number ) {
 
 		this.bind();
 
@@ -99,12 +99,12 @@ export default class Texture3D extends Texture {
 
 	}
 
-	setFromData(data: Float32Array | Uint16Array | Uint8Array, width: number, height: number, depth: number) {
+	setFromData( data: Float32Array | Uint16Array | Uint8Array, width: number, height: number, depth: number ) {
 
 		this.bind();
 
-		this._gl.texImage3D(this.target, 0, this._internalFormat, width, height, depth, 0,
-			this._format, this._type, data);
+		this._gl.texImage3D( this.target, 0, this._internalFormat, width, height, depth, 0,
+			this._format, this._type, data );
 
 		this.unbind();
 
@@ -114,9 +114,9 @@ export default class Texture3D extends Texture {
 
 		this.bind();
 
-		if (this._flipY) {
+		if ( this._flipY ) {
 
-			this._gl.pixelStorei(this._gl.UNPACK_FLIP_Y_WEBGL, this._flipY);
+			this._gl.pixelStorei( this._gl.UNPACK_FLIP_Y_WEBGL, this._flipY );
 
 		}
 
@@ -156,9 +156,9 @@ export default class Texture3D extends Texture {
 			this._maxLevel
 		);
 
-		if (this._generateMipmaps) {
+		if ( this._generateMipmaps ) {
 
-			this._gl.generateMipmap(this._target);
+			this._gl.generateMipmap( this._target );
 
 		}
 

@@ -22,13 +22,13 @@ export default class TransformFeedback {
 	private _next!: { updateVAO: VAO; tf: WebGLTransformFeedback; };
 	private _count: number;
 
-	constructor({
+	constructor( {
 		bolt,
 		count
 	}: {
 		bolt: Bolt,
 		count: number
-	}) {
+	} ) {
 
 		this._gl = bolt.getContext();
 		this._vao1 = new VAO();
@@ -41,26 +41,26 @@ export default class TransformFeedback {
 	 * bind vbos that require swappoing at run time
 	 * @param  {VBOSwapDefinition[]} vboDefinitions - array of VBO definitions
 	 */
-	bindVAOS(vboDefinitions: VBOSwapDefinition[]) {
+	bindVAOS( vboDefinitions: VBOSwapDefinition[] ) {
 
-		this._linkAttribs(vboDefinitions);
+		this._linkAttribs( vboDefinitions );
 
-		this._vboSwapDefinitions = vboDefinitions.filter((vboDefinition) => vboDefinition.requiresSwap);
+		this._vboSwapDefinitions = vboDefinitions.filter( ( vboDefinition ) => vboDefinition.requiresSwap );
 
 		this._initTransformFeedback();
 
 	}
 
-	private _createTransformFeedback(buffers: WebGLBuffer[]): WebGLTransformFeedback {
+	private _createTransformFeedback( buffers: WebGLBuffer[] ): WebGLTransformFeedback {
 
 		const tf = this._gl.createTransformFeedback();
-		this._gl.bindTransformFeedback(this._gl.TRANSFORM_FEEDBACK, tf);
+		this._gl.bindTransformFeedback( this._gl.TRANSFORM_FEEDBACK, tf );
 
-		buffers.forEach((buffer, i) => {
+		buffers.forEach( ( buffer, i ) => {
 
-			this._gl.bindBufferBase(this._gl.TRANSFORM_FEEDBACK_BUFFER, i, buffer);
+			this._gl.bindBufferBase( this._gl.TRANSFORM_FEEDBACK_BUFFER, i, buffer );
 
-		});
+		} );
 
 		return tf!;
 
@@ -68,8 +68,8 @@ export default class TransformFeedback {
 
 	private _initTransformFeedback() {
 
-		this._tf1 = this._createTransformFeedback(this._vboSwapDefinitions.map((vboDefinition) => vboDefinition.vbo1.buffer));
-		this._tf2 = this._createTransformFeedback(this._vboSwapDefinitions.map((vboDefinition) => vboDefinition.vbo2.buffer));
+		this._tf1 = this._createTransformFeedback( this._vboSwapDefinitions.map( ( vboDefinition ) => vboDefinition.vbo1.buffer ) );
+		this._tf2 = this._createTransformFeedback( this._vboSwapDefinitions.map( ( vboDefinition ) => vboDefinition.vbo2.buffer ) );
 
 		// create current / next ojects ready for swap
 		this._current = {
@@ -84,27 +84,27 @@ export default class TransformFeedback {
 
 	}
 
-	private _linkAttribs(vboDefinitions: VBOSwapDefinition[]) {
+	private _linkAttribs( vboDefinitions: VBOSwapDefinition[] ) {
 
 		this._vao1.bind();
-		for (let i = vboDefinitions.length - 1; i >= 0; i--) {
+		for ( let i = vboDefinitions.length - 1; i >= 0; i -- ) {
 
-			const vboDefinition = vboDefinitions[i];
+			const vboDefinition = vboDefinitions[ i ];
 
 			const { vbo1, attributeLocation, size } = vboDefinition;
-			this._vao1.linkAttrib(vbo1, attributeLocation, size, FLOAT, size * Float32Array.BYTES_PER_ELEMENT, 0);
+			this._vao1.linkAttrib( vbo1, attributeLocation, size, FLOAT, size * Float32Array.BYTES_PER_ELEMENT, 0 );
 
 		}
 
 		this._vao1.unbind();
 
 		this._vao2.bind();
-		for (let i = vboDefinitions.length - 1; i >= 0; i--) {
+		for ( let i = vboDefinitions.length - 1; i >= 0; i -- ) {
 
-			const vboDefinition = vboDefinitions[i];
+			const vboDefinition = vboDefinitions[ i ];
 
 			const { vbo2, attributeLocation, size } = vboDefinition;
-			this._vao2.linkAttrib(vbo2, attributeLocation, size, FLOAT, size * Float32Array.BYTES_PER_ELEMENT, 0);
+			this._vao2.linkAttrib( vbo2, attributeLocation, size, FLOAT, size * Float32Array.BYTES_PER_ELEMENT, 0 );
 
 		}
 
@@ -123,19 +123,19 @@ export default class TransformFeedback {
 
 	compute() {
 
-		this._gl.enable(this._gl.RASTERIZER_DISCARD);
+		this._gl.enable( this._gl.RASTERIZER_DISCARD );
 
-		this._gl.bindVertexArray(this._current.updateVAO.arrayObject);
+		this._gl.bindVertexArray( this._current.updateVAO.arrayObject );
 
-		this._gl.bindTransformFeedback(this._gl.TRANSFORM_FEEDBACK, this._current.tf);
-		this._gl.beginTransformFeedback(POINTS);
-		this._gl.drawArrays(POINTS, 0, this._count);
+		this._gl.bindTransformFeedback( this._gl.TRANSFORM_FEEDBACK, this._current.tf );
+		this._gl.beginTransformFeedback( POINTS );
+		this._gl.drawArrays( POINTS, 0, this._count );
 		this._gl.endTransformFeedback();
 
-		this._gl.disable(this._gl.RASTERIZER_DISCARD);
-		this._gl.bindTransformFeedback(this._gl.TRANSFORM_FEEDBACK, null);
+		this._gl.disable( this._gl.RASTERIZER_DISCARD );
+		this._gl.bindTransformFeedback( this._gl.TRANSFORM_FEEDBACK, null );
 
-		this._gl.bindVertexArray(null);
+		this._gl.bindVertexArray( null );
 
 		this._swapBuffers();
 
