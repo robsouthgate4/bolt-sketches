@@ -81,6 +81,7 @@ export default class EventListeners {
 			window.addEventListener( "mousemove", this.onMouseMove.bind( this ) );
 			window.addEventListener( "wheel", this.onWheel.bind( this ) );
 			window.addEventListener( "keydown", this.onKeyDown.bind( this ) );
+			window.addEventListener( "keyup", this.onKeyUp.bind( this ) );
 
 		}
 

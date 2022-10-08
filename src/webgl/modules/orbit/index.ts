@@ -123,13 +123,15 @@ export default class Orbit {
 
 	}
 
-	private _handleKeyUp() {
+	private _handleKeyUp( ev: any ) {
 
 		if ( this._shiftKeyDown ) {
 
 			this._shiftKeyDown = false;
 
 		}
+
+		console.log( this._shiftKeyDown );
 
 	}
 

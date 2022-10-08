@@ -17,6 +17,7 @@ out vec2 Uv;
 out vec4 ShadowCoord;
 out vec3 FragPosition;
 out vec3 Eye;
+out vec3 Random;
 out float Fog;
 
 uniform mat4 projection;
@@ -25,6 +26,7 @@ uniform mat4 view;
 uniform mat4 lightSpaceMatrix;
 uniform float particleScale;
 uniform float time;
+
 
 #define PI 3.14159265359
 
@@ -85,12 +87,6 @@ void main() {
 
     vec3 transformed  = pos;
 
-    transformed.y += aRandom.x * 0.05 * -cos( transformed.x + time + aRandom.x);
-    transformed.x += aRandom.y * 0.08 * sin(time + aRandom.x);
-    transformed.z += aRandom.z * 0.08;
-
-   // vec4 worldPosition = model * vec4( transformed, 1.0 );
-
     mat4 modelView = view * model;
     mat4 mvp = projection * modelView;
 
@@ -114,6 +110,8 @@ void main() {
     rotatedNormal = mat3( rotation3d( vec3( 1.0, 0.0, 0.0 ), PI * 0.5) ) * rotatedNormal;
 
     Normal = ( model * ( lookAt * vec4( rotatedNormal, 0.0 ) ) ).xyz;
+
+    Random = aRandom;
 
     // mat4 mvp = model * view * projection;
 

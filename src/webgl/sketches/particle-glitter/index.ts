@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, LINES, LINE_STRIP, Mesh, POINTS, Program, Texture2D, VBO } from "@/webgl/libs/bolt";
+import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, LINE_STRIP, Mesh, POINTS, Program, Texture2D, VBO } from "@/webgl/libs/bolt";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
@@ -12,17 +12,16 @@ import depthFragmentInstanced from "./shaders/depth/depth.frag";
 import simulationVertex from "./shaders/simulation/simulation.vert";
 import simulationFragment from "./shaders/simulation/simulation.frag";
 
-import { mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 import Orbit from "@webgl/modules/orbit";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
 import DrawState from "@/webgl/modules/draw-state";
 import config from "./config";
-import GLTFLoader from "@/webgl/modules/gltf-loader";
 import { GUI } from "lil-gui";
 import EaseNumber from "@/webgl/helpers/EaseNumber";
 import Raycast from "@/webgl/modules/raycast";
-import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
+import EventListeners from "@/webgl/modules/event-listeners";
 import Ray from "@/webgl/modules/raycast/Ray";
 import { GL_RESIZE_TOPIC, GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import Sphere from "@/webgl/modules/primitives/Sphere";
@@ -149,7 +148,7 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 0, 0, 1 ),
+			position: vec3.fromValues( 0, 0, 2 ),
 			target: vec3.fromValues( 0, 0, 0 ),
 		} );
 
@@ -193,7 +192,11 @@ export default class extends Base {
 
 		for ( let i = 0; i < count; i ++ ) {
 
-			p[ i ] = vec3.fromValues( ( i - count / 2 ) * 0.05, Math.cos( i * 0.7 ) * 0.06, - Math.sin( i * 0.7 ) * 0.1 );
+			const x = Math.cos( i * 0.7 ) * 0.1;
+			const y = - ( i - count / 2 ) * 0.12;
+			const z = - Math.sin( i * 0.7 ) * 0.05;
+
+			p[ i ] = vec3.fromValues( x, y, z );
 
 		}
 
@@ -218,14 +221,6 @@ export default class extends Base {
 
 	private constructDebugSpline() {
 
-		// check if particle count is in local storage
-		// if (localStorage.getItem("particleCount") !== null) {
-
-		// 	this.instanceCount = parseInt(localStorage.getItem("particleCount") as string);
-		// 	this.config.particleCount = this.instanceCount;
-
-		// }
-
 		const spline = [];
 		this.points = this.getPointPositions( this.pointCount );
 
@@ -239,7 +234,6 @@ export default class extends Base {
 			spline[ i ] = this.createSpline( p[ i ], p[ i + 1 ], p[ i + 2 ], p[ i + 3 ] );
 
 		}
-
 
 		// create line segments for curve drawing
 		const flattenedPoints = [];
@@ -256,7 +250,6 @@ export default class extends Base {
 			}
 
 		}
-
 
 		const pointSplineMesh = new Mesh( {
 			positions: pointAtTime,
@@ -352,27 +345,31 @@ export default class extends Base {
 
 		for ( let i = 0; i < this.instanceCount; i ++ ) {
 
-			lifeTimes.push( ( Math.random() + 0.5 ) * 17 );
+			lifeTimes.push( ( Math.random() + 0.5 ) * 10 );
 
-			randoms.push( Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1 );
+			randoms.push(
+				Math.random() * 2 - 1,
+				Math.random() * 2 - 1,
+				Math.random() * 2 - 1
+			);
 
 			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.1;
-			const positionY = this.points[ 0 ][ 1 ] + ( Math.random() * 2 - 1 ) * 0.1;
+			const positionY = this.points[ 0 ][ 1 ] + Math.random() * 3.0;
 			const positionZ = this.points[ 0 ][ 2 ] + ( Math.random() * 2 - 1 ) * 0.1;
 
 			offsets.push( positionX, positionY, positionZ );
 
 			const normal = Math.random() * 2 - 1;
-			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.01;
+			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.1;
 
 			positions.push( positionX, positionY, positionZ );
 
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.2 );
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.2 );
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.2 );
+			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
+			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
+			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
 
 			velocities.push( 0 );
 			velocities.push( 0 );
@@ -575,6 +572,7 @@ export default class extends Base {
 		this.simulationProgram.setFloat( "time", elapsed );
 		this.simulationProgram.setVector3( "repellorPosition", this.repellorPosition );
 		this.simulationProgram.setFloat( "repellorScale", d );
+		this.simulationProgram.setFloat( "delta", delta );
 		this.transformFeedback.compute();
 
 		//this.depthDrawState.draw()
@@ -597,7 +595,7 @@ export default class extends Base {
 		vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
 
 		this.bolt.draw( this.lineDrawSet );
-		this.bolt.draw( this.pointDrawSet );
+		//this.bolt.draw( this.pointDrawSet );
 
 	}
 

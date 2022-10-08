@@ -1,8 +1,8 @@
 export default {
-	particleScale: 4.0,
+	particleScale: 10.0,
 	particleCount: 40000,
 	particleSpeed: 1,
-	particleLifeRate: 0.07,
+	particleLifeRate: 0.01,
 	repellorStrength: 0.055,
 	shadowStrength: 0.3,
 	colorMode: "dark",

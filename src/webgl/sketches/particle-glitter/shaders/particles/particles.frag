@@ -9,6 +9,7 @@ in vec3 Normal;
 in vec4 ShadowCoord;
 in vec3 FragPosition;
 in vec3 Eye;
+in vec3 Random;
 in float Fog;
 
 uniform sampler2D mapDepth;
@@ -70,15 +71,15 @@ void main() {
     if(sdf == 0.0) discard;
 
     vec3  lightDirection = ( lightPosition - FragPosition );
-    float shadow         = getShadow( ShadowCoord, normalize( lightDirection ) );
+    //float shadow         = getShadow( ShadowCoord, normalize( lightDirection ) );
     vec3  colorLight     = texture( mapMatcapLight, getReflection( Eye, Normal ) ).rgb;
     vec3  colorDark      = texture( mapMatcapDark, getReflection( Eye, Normal ) ).rgb;
 
     vec3 color = mix( colorLight, colorDark, colorMode );
     //color *= 1.0 - ( shadow * shadowStrength );
 
-    FragColor = vec4( colorLight, 1.0);
+    FragColor = vec4( colorLight + (Random.x * 0.2), 1.0);
 
-    //FragColor = vec4( vec3( sdf ), 1.0 );
+    //ragColor = vec4( vec3( sdf ), 1.0 );
 
 }
