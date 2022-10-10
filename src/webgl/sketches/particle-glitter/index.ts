@@ -37,7 +37,10 @@ import pointFragmentShader from "./shaders/point/point.frag";
 
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
 import { getDeviceType } from "@/utils";
+import Post from "@/webgl/modules/post";
 import { catmullRomInterpolation, CatmullRom } from "@/webgl/modules/splines";
+import CopyPass from "@/webgl/modules/post/passes/CopyPass";
+import BokehPass from "@/webgl/modules/post/passes/BokehPass";
 
 export default class extends Base {
 
@@ -77,6 +80,7 @@ export default class extends Base {
 	pointDrawSet: DrawSet;
 	catmullRom: CatmullRom;
 	points: any[];
+	post: Post;
 
 	constructor() {
 
@@ -97,9 +101,16 @@ export default class extends Base {
 
 		this.gl = this.bolt.getContext();
 
+		this.depthFBO = new FBO( { width: this.width, height: this.height, depth: true } );
+
+
 		this.repellorDebug = new DrawSet(
 			new Mesh( new Sphere() ), new Program( normalVertexShader, normalFragmentShader )
 		);
+
+		this.repellorDebug.transform.scale = vec3.fromValues( 1, 1, 1 );
+
+		this.repellorDebug.transform.position = vec3.fromValues( 1, 0, - 8 );
 
 		this.initScene();
 		this.initSketch();
@@ -108,7 +119,7 @@ export default class extends Base {
 
 	}
 
-	initListeners() {
+	private initListeners() {
 
 		this.eventListeners.listen( GL_TOUCH_MOVE_TOPIC, ( e: any ) => {
 
@@ -141,13 +152,13 @@ export default class extends Base {
 	}
 
 	// construct the scene
-	initScene() {
+	private initScene() {
 
 		this.camera = new CameraPersp( {
 			aspect: this.canvas.width / this.canvas.height,
 			fov: 45,
-			near: 0.1,
-			far: 1000,
+			near: 0.01,
+			far: 10,
 			position: vec3.fromValues( 0, 0, 2 ),
 			target: vec3.fromValues( 0, 0, 0 ),
 		} );
@@ -172,14 +183,20 @@ export default class extends Base {
 			maxRadius: 50,
 			minElevation: - Math.PI * 0.5,
 			maxElevation: Math.PI * 0.5,
-			ease: 1,
-			zoomSpeed: 0.25,
-			disableOrbit: getDeviceType() === "mobile",
+			ease: 0.1,
+			zoomSpeed: 0.1,
+			//disableOrbit: getDeviceType() === "mobile",
 		} );
 
 		this.bolt.setCamera( this.camera );
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 		this.bolt.enableDepth();
+
+		this.post = new Post( this.bolt, { outputDepth: true } );
+
+		const bokehPass = new BokehPass( this.bolt, { width: this.width, height: this.height } );
+
+		this.post.add( bokehPass, true );
 
 		this.resize();
 
@@ -271,7 +288,6 @@ export default class extends Base {
 
 		this.constructDebugSpline();
 
-		this.depthFBO = new FBO( { width: 2048, height: 2048, depth: true } );
 		this.particleProgram = new Program( particlesVertexInstanced, particlesFragmentInstanced );
 
 		const transformFeedbackVaryings = [
@@ -341,8 +357,6 @@ export default class extends Base {
 		const randoms: number[] = [];
 
 
-		const n = 0.0;
-
 		for ( let i = 0; i < this.instanceCount; i ++ ) {
 
 			lifeTimes.push( ( Math.random() + 0.5 ) * 10 );
@@ -353,9 +367,9 @@ export default class extends Base {
 				Math.random() * 2 - 1
 			);
 
-			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.1;
-			const positionY = this.points[ 0 ][ 1 ] + Math.random() * 3.0;
-			const positionZ = this.points[ 0 ][ 2 ] + ( Math.random() * 2 - 1 ) * 0.1;
+			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.2;
+			const positionY = this.points[ 0 ][ 1 ] + Math.random() * 2.0;
+			const positionZ = this.points[ 0 ][ 2 ] + ( Math.random() * 2 - 1 ) * 0.2;
 
 			offsets.push( positionX, positionY, positionZ );
 
@@ -367,14 +381,7 @@ export default class extends Base {
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
-			// velocities.push( ( Math.random() * 2 - 1 ) * 0.01 );
-
-			velocities.push( 0 );
-			velocities.push( 0 );
-			velocities.push( 0 );
-
+			velocities.push( 0, 0, 0 );
 
 		}
 
@@ -460,8 +467,6 @@ export default class extends Base {
 
 		const dp = new Program( depthVertexInstanced, depthFragmentInstanced );
 
-		const depthDrawSet = new DrawSet( pointMeshShadow, dp );
-
 		const bg = this.config[ this.config.colorMode ].backgroundColor;
 
 		// prepare draw states
@@ -489,7 +494,6 @@ export default class extends Base {
 			.uniformFloat( "shadowStrength", this.config.shadowStrength )
 			.uniformFloat( "particleScale", this.config.particleScale )
 			.uniformFloat( "colorMode", this.config.colorMode === "light" ? 0 : 1 )
-			.uniformMatrix4( "lightSpaceMatrix", this.lightSpaceMatrix )
 			.uniformTexture( "mapMatcapLight", this.maptcapLight )
 			.uniformTexture( "mapMatcapDark", this.maptcapDark )
 			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
@@ -498,7 +502,7 @@ export default class extends Base {
 
 	}
 
-	initGUI() {
+	private initGUI() {
 
 		const gui = new GUI();
 
@@ -543,10 +547,11 @@ export default class extends Base {
 
 	}
 
-	resize() {
+	private resize() {
 
 
 		this.bolt.resizeCanvasToDisplay();
+		this.post.resize( this.canvas.width, this.canvas.height );
 		this.camera.updateProjection( this.canvas.width / this.canvas.height );
 
 	}
@@ -580,7 +585,7 @@ export default class extends Base {
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
 
-
+		this.post.begin();
 
 		this.particleDrawState
 			.uniformFloat( "colorMode", this.colorEase.value )
@@ -592,10 +597,13 @@ export default class extends Base {
 				bgLight[ 3 ] * ( 1 - this.colorEase.value ) + bgDark[ 3 ] * ( this.colorEase.value ) )
 			.draw();
 
-		vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
+
+		// vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
 
 		this.bolt.draw( this.lineDrawSet );
-		//this.bolt.draw( this.pointDrawSet );
+		//this.bolt.draw( this.repellorDebug );
+
+		this.post.end();
 
 	}
 

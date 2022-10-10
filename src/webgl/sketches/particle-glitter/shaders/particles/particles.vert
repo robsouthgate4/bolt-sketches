@@ -100,6 +100,8 @@ void main() {
 
     float scale = aScale;
 
+    scale += 0.1 * Random.y;
+
     gl_PointSize = scale * particleScale;
 
     gl_PointSize *= ( scale / - mvPosition.z );

@@ -223,6 +223,7 @@ void main() {
 
   pos += o * 0.1;
 
+
   life -= particleLifeRate;
 
   if(life < 0.00001 || pos.y < -0.9) {

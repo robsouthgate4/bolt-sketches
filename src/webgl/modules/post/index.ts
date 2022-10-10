@@ -9,27 +9,36 @@ export default class Post {
 	_width: number;
 	_passes: Pass[] = [];
 	bolt: Bolt;
+
 	private _readFbo!: FBO;
 	private _writeFbo!: FBO;
 	private _writeRBO: RBO;
 	private _readRBO: RBO;
+	private _outputDepth: boolean;
 
-	constructor( bolt: Bolt ) {
+	constructor( bolt: Bolt, { outputDepth = false } = {} ) {
 
 		this.bolt = bolt;
+
+		this._outputDepth = outputDepth;
 
 		this._width = window.innerWidth;
 		this._height = window.innerHeight;
 
-		this._readFbo = new FBO( { width: this._width, height: this._height } );
-		this._readFbo.bind();
-		this._readRBO = new RBO( { width: this._width, height: this._height } );
-		this._readFbo.unbind();
+		this._readFbo = new FBO( { width: this._width, height: this._height, depth: outputDepth } );
+		this._writeFbo = new FBO( { width: this._width, height: this._height, depth: outputDepth } );
 
-		this._writeFbo = new FBO( { width: this._width, height: this._height } );
-		this._writeFbo.bind();
-		this._writeRBO = new RBO( { width: this._width, height: this._height } );
-		this._writeFbo.unbind();
+		if ( ! outputDepth ) {
+
+			this._readFbo.bind();
+			this._readRBO = new RBO( { width: this._width, height: this._height } );
+			this._readFbo.unbind();
+
+			this._writeFbo.bind();
+			this._writeRBO = new RBO( { width: this._width, height: this._height } );
+			this._writeFbo.unbind();
+
+		}
 
 		this._passes = [];
 
@@ -48,8 +57,14 @@ export default class Post {
 
 		this._readFbo.resize( width, height );
 		this._writeFbo.resize( width, height );
-		this._readRBO.resize( width, height );
-		this._writeRBO.resize( width, height );
+
+		if ( ! this._outputDepth ) {
+
+			this._readRBO.resize( width, height );
+			this._writeRBO.resize( width, height );
+
+		}
+
 
 	}
 
