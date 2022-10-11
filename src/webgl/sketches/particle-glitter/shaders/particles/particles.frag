@@ -67,7 +67,7 @@ void main() {
     vec2 uv = gl_PointCoord.xy;
     uv.y = 1.0 - uv.y;
 
-    float sdf = 1.0 - step( 0.5, length(uv - vec2(0.5)) );
+    float sdf = 1.0 - step( 0.5, length( uv - vec2( 0.5 )) );
     if(sdf == 0.0) discard;
 
     vec3  lightDirection = ( lightPosition - FragPosition );
@@ -78,7 +78,7 @@ void main() {
     vec3 color = mix( colorLight, colorDark, colorMode );
     //color *= 1.0 - ( shadow * shadowStrength );
 
-    FragColor = vec4( colorLight + (Random.x * 0.2), 1.0);
+    FragColor = vec4( colorLight + ( Random.x * 0.0 ), 1.0 );
 
     //ragColor = vec4( vec3( sdf ), 1.0 );
 

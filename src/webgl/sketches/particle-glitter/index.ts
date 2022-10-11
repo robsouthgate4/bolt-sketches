@@ -39,7 +39,6 @@ import EaseVec3 from "@/webgl/helpers/EaseVector3";
 import { getDeviceType } from "@/utils";
 import Post from "@/webgl/modules/post";
 import { catmullRomInterpolation, CatmullRom } from "@/webgl/modules/splines";
-import CopyPass from "@/webgl/modules/post/passes/CopyPass";
 import BokehPass from "@/webgl/modules/post/passes/BokehPass";
 
 export default class extends Base {
@@ -564,6 +563,7 @@ export default class extends Base {
 
 	update( elapsed: number, delta: number ) {
 
+
 		if ( ! this.assetsLoaded ) return;
 
 		this.orbit.update();
@@ -601,7 +601,6 @@ export default class extends Base {
 		// vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
 
 		this.bolt.draw( this.lineDrawSet );
-		//this.bolt.draw( this.repellorDebug );
 
 		this.post.end();
 
