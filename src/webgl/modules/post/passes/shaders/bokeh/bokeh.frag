@@ -82,7 +82,7 @@ make sure that these two values are the same for your camera, otherwise distance
 //------------------------------------------
 //user variables
 
-const int samples = 4; //samples on the first ring
+const int samples = 3; //samples on the first ring
 const int rings = 3; //ring count
 
 const bool manualdof = true; //manual dof calculation

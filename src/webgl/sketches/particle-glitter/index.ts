@@ -6,9 +6,6 @@ import Bolt, { CameraOrtho, CameraPersp, CLAMP_TO_EDGE, DrawSet, DYNAMIC_DRAW, F
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
 
-import depthVertexInstanced from "./shaders/depth/depth.vert";
-import depthFragmentInstanced from "./shaders/depth/depth.frag";
-
 import simulationVertex from "./shaders/simulation/simulation.vert";
 import simulationFragment from "./shaders/simulation/simulation.frag";
 
@@ -36,7 +33,6 @@ import pointVertexShader from "./shaders/point/point.vert";
 import pointFragmentShader from "./shaders/point/point.frag";
 
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
-import { getDeviceType } from "@/utils";
 import Post from "@/webgl/modules/post";
 import { catmullRomInterpolation, CatmullRom } from "@/webgl/modules/splines";
 import BokehPass from "@/webgl/modules/post/passes/BokehPass";
@@ -355,9 +351,12 @@ export default class extends Base {
 		const scales: number[] = [];
 		const randoms: number[] = [];
 		const groupIds: number[] = [];
+		const indices: number[] = [];
 
 
 		for ( let i = 0; i < this.instanceCount; i ++ ) {
+
+			indices.push( i );
 
 			const groupID = Math.floor( Math.random() * 2 );
 			groupIds.push( groupID );
@@ -463,7 +462,8 @@ export default class extends Base {
 
 		const pointMesh = new Mesh( {
 			positions,
-			normals
+			normals,
+			indices,
 		} ).setDrawType( POINTS );
 
 		pointMesh.setAttribute( new Float32Array( scales ), 1, 7 );
@@ -571,9 +571,8 @@ export default class extends Base {
 		this.simulationProgram.setVector3( "repellorPosition", this.repellorPosition );
 		this.simulationProgram.setFloat( "repellorScale", d );
 		this.simulationProgram.setFloat( "delta", delta );
-		this.transformFeedback.compute();
 
-		//this.depthDrawState.draw()
+		this.transformFeedback.compute();
 
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;

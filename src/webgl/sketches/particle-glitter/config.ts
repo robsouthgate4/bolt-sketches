@@ -1,6 +1,6 @@
 export default {
 	particleScale: 10.0,
-	particleCount: 160000,
+	particleCount: 120000,
 	particleSpeed: 1,
 	particleLifeRate: 0.01,
 	repellorStrength: 0.055,
