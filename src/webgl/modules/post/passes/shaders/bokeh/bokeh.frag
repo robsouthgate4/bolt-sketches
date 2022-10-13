@@ -82,14 +82,14 @@ make sure that these two values are the same for your camera, otherwise distance
 //------------------------------------------
 //user variables
 
-const int samples = 3; //samples on the first ring
+const int samples = 4; //samples on the first ring
 const int rings = 3; //ring count
 
 const bool manualdof = true; //manual dof calculation
 const float ndofstart = 1.0; //near dof blur start
 const float ndofdist = 2.0; //near dof blur falloff distance
-const float fdofstart = 2.0; //far dof blur start
-const float fdofdist = 3.0; //far dof blur falloff distance
+const float fdofstart = 1.5; //far dof blur start
+const float fdofdist = 1.5; //far dof blur falloff distance
 
 const float CoC = 0.03;//circle of confusion size in mm (35mm film = 0.03mm)
 
@@ -108,11 +108,11 @@ const float gain = 100.0; //highlight gain;
 const float bias = 0.5; //bokeh edge bias
 const float fringe = 0.7; //bokeh chromatic aberration/fringing
 
-const bool noise = true; //use noise instead of pattern for sample dithering
+const bool noise = false; //use noise instead of pattern for sample dithering
 const float namount = 0.0001; //dither amount
 
 const bool depthblur = true; //blur the depth buffer?
-const float dbsize = 1.8; //depthblursize
+const float dbsize = 2.5; //depthblursize
 
 /*
 next part is experimental

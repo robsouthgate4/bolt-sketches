@@ -11,6 +11,7 @@ layout(location = 5) in float aInitLifeTime;
 layout(location = 6) in vec3 aVelocity;
 layout(location = 7) in float aScale;
 layout(location = 8) in vec3 aRandom;
+layout(location = 9) in float aGroup;
 
 out vec3 Normal;
 out vec2 Uv;
@@ -19,6 +20,7 @@ out vec3 FragPosition;
 out vec3 Eye;
 out vec3 Random;
 out float Fog;
+out float Group;
 
 uniform mat4 projection;
 uniform mat4 model;
@@ -115,8 +117,8 @@ void main() {
 
     Random = aRandom;
 
-    // mat4 mvp = model * view * projection;
+    Group = aGroup;
 
-    Eye = normalize(mvp * vec4(transformed, 1.0)).xyz;
+    Eye = normalize( mvp * vec4( transformed, 1.0 ) ).xyz;
 
 }
