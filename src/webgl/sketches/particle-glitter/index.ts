@@ -370,7 +370,7 @@ export default class extends Base {
 				Math.random() * 2 - 1
 			);
 
-			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.4;
+			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.2;
 			const positionY = this.points[ 0 ][ 1 ] + Math.random() * 2.0;
 			const positionZ = this.points[ 0 ][ 2 ] + ( Math.random() * 2 - 1 ) * 0.2;
 

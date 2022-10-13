@@ -211,7 +211,7 @@ void main() {
 
     // rotate the spline for the first group
     splinePositionsB[i] = (rotation3d( vec3( 0., 1., 0. ), PI  ) * vec4( splinePositionsB[i], 1.0 )).xyz;
-    splinePositionsB[i].xz *= 2.0;
+    splinePositionsB[i].xz *= 1.2;
 
   }
 
@@ -242,7 +242,7 @@ void main() {
 
   vec3 c = curlNoise(pos * 5.0 + time) * 0.0001;
 
-  vel += mix( c, c * 0.7, groupID );
+  vel += mix( c, c * 0.9, groupID );
   vel += attractorForce * 0.0001;
   vel *= 0.98;
   pos += vel;
