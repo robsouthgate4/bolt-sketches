@@ -196,7 +196,7 @@ export default class extends Base {
 
 		for ( let i = 0; i < count; i ++ ) {
 
-			const x = Math.cos( i * 0.7 ) * 0.1;
+			const x = Math.cos( i * 0.7 ) * 0.05;
 			const y = - ( i - count / 2 ) * 0.12;
 			const z = - Math.sin( i * 0.7 ) * 0.05;
 

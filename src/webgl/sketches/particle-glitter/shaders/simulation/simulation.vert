@@ -211,7 +211,7 @@ void main() {
 
     // rotate the spline for the first group
     splinePositionsB[i] = (rotation3d( vec3( 0., 1., 0. ), PI  ) * vec4( splinePositionsB[i], 1.0 )).xyz;
-    splinePositionsB[i].xz *= 1.2;
+    //splinePositionsB[i].xz *= 1.2;
 
   }
 

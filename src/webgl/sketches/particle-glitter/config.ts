@@ -1,5 +1,5 @@
 export default {
-	particleScale: 10.0,
+	particleScale: 12.0,
 	particleCount: 120000,
 	particleSpeed: 1,
 	particleLifeRate: 0.01,
