@@ -14,7 +14,7 @@ export default class CameraFPS {
 	private _camera: Camera;
 	private _active: boolean;
 
-	constructor(camera: Camera) {
+	constructor( camera: Camera ) {
 
 		this._camera = camera;
 		this._active = false;
@@ -34,28 +34,28 @@ export default class CameraFPS {
 
 	initListeners() {
 
-		window.addEventListener("mousemove", this.handleMouseMove.bind(this));
+		window.addEventListener( "mousemove", this.handleMouseMove.bind( this ) );
 
-		window.addEventListener("keyup", (e) => {
+		window.addEventListener( "keyup", ( e ) => {
 
-			const keys = ["w", "s", "a", "d", "e", "q"];
-			if (keys.includes(e.key)) {
+			const keys = [ "w", "s", "a", "d", "e", "q" ];
+			if ( keys.includes( e.key ) ) {
 
-				this._activeKeys = this._activeKeys.filter((k) => k !== e.key);
+				this._activeKeys = this._activeKeys.filter( ( k ) => k !== e.key );
 
 			}
 
-		});
+		} );
 
-		window.addEventListener("keydown", (e) => {
+		window.addEventListener( "keydown", ( e ) => {
 
-			this._activeKeys.push(e.key);
+			this._activeKeys.push( e.key );
 
-			if (e.code === "Space") {
+			if ( e.code === "Space" ) {
 
-				this._active = !this._active;
+				this._active = ! this._active;
 
-				if (!this._active) {
+				if ( ! this._active ) {
 
 					this._firstMouse = true;
 
@@ -69,18 +69,18 @@ export default class CameraFPS {
 
 			}
 
-		});
+		} );
 
 	}
 
-	handleMouseMove(ev: MouseEvent) {
+	handleMouseMove( ev: MouseEvent ) {
 
-		if (!this._active) return;
+		if ( ! this._active ) return;
 
 		const xPos = ev.clientX;
 		const yPos = ev.clientY;
 
-		if (this._firstMouse) {
+		if ( this._firstMouse ) {
 
 			this._lastX = xPos;
 			this._lastY = yPos;
@@ -101,118 +101,118 @@ export default class CameraFPS {
 		this._yaw += xOffset;
 		this._pitch += yOffset;
 
-		if (this._pitch > 89.0) this._pitch = 89.0;
-		if (this._pitch < - 89.0) this._pitch = - 89.0;
+		if ( this._pitch > 89.0 ) this._pitch = 89.0;
+		if ( this._pitch < - 89.0 ) this._pitch = - 89.0;
 
-		const yawRadian = glMatrix.toRadian(this._yaw);
-		const pitchRadian = glMatrix.toRadian(this._pitch);
-		const yawCos = Math.cos(yawRadian);
-		const yawSin = Math.sin(yawRadian);
-		const pitchCos = Math.cos(pitchRadian);
-		const pitchSin = Math.sin(pitchRadian);
+		const yawRadian = glMatrix.toRadian( this._yaw );
+		const pitchRadian = glMatrix.toRadian( this._pitch );
+		const yawCos = Math.cos( yawRadian );
+		const yawSin = Math.sin( yawRadian );
+		const pitchCos = Math.cos( pitchRadian );
+		const pitchSin = Math.sin( pitchRadian );
 
 		const direction = vec3.create();
-		direction[0] = yawCos * pitchCos;
-		direction[1] = pitchSin;
-		direction[2] = yawSin * pitchCos;
+		direction[ 0 ] = yawCos * pitchCos;
+		direction[ 1 ] = pitchSin;
+		direction[ 2 ] = yawSin * pitchCos;
 
-		vec3.normalize(direction, direction);
-		vec3.copy(this._camera.forward, direction);
+		vec3.normalize( direction, direction );
+		vec3.copy( this._camera.forward, direction );
 
 	}
 
-	processInputs(delta: number) {
+	processInputs( delta: number ) {
 
-		if (!this.active) return;
+		if ( ! this.active ) return;
 
 		this._cameraSpeed = 20 * delta;
 
-		if (this._activeKeys.includes("w")) {
+		if ( this._activeKeys.includes( "w" ) ) {
 
-			const tempForward = vec3.clone(this._camera.forward);
-
-			vec3.multiply(
-				tempForward,
-				tempForward,
-				vec3.fromValues(this._cameraSpeed, this._cameraSpeed, this._cameraSpeed)
-			);
-			vec3.add(this._camera.position, this._camera.position, tempForward);
-
-		}
-
-		if (this._activeKeys.includes("s")) {
-
-			const tempForward = vec3.clone(this._camera.forward);
+			const tempForward = vec3.clone( this._camera.forward );
 
 			vec3.multiply(
 				tempForward,
 				tempForward,
-				vec3.fromValues(this._cameraSpeed, this._cameraSpeed, this._cameraSpeed)
+				vec3.fromValues( this._cameraSpeed, this._cameraSpeed, this._cameraSpeed )
 			);
-			vec3.sub(this._camera.position, this._camera.position, tempForward);
+			vec3.add( this._camera.position, this._camera.position, tempForward );
 
 		}
 
-		if (this._activeKeys.includes("a")) {
+		if ( this._activeKeys.includes( "s" ) ) {
 
-			const tempPos = vec3.clone(this._camera.position);
+			const tempForward = vec3.clone( this._camera.forward );
 
-			vec3.cross(tempPos, this._camera.forward, this._camera.up);
-			vec3.normalize(tempPos, tempPos);
+			vec3.multiply(
+				tempForward,
+				tempForward,
+				vec3.fromValues( this._cameraSpeed, this._cameraSpeed, this._cameraSpeed )
+			);
+			vec3.sub( this._camera.position, this._camera.position, tempForward );
+
+		}
+
+		if ( this._activeKeys.includes( "a" ) ) {
+
+			const tempPos = vec3.clone( this._camera.position );
+
+			vec3.cross( tempPos, this._camera.forward, this._camera.up );
+			vec3.normalize( tempPos, tempPos );
 
 			vec3.multiply(
 				tempPos,
 				tempPos,
-				vec3.fromValues(this._cameraSpeed, this._cameraSpeed, this._cameraSpeed)
+				vec3.fromValues( this._cameraSpeed, this._cameraSpeed, this._cameraSpeed )
 			);
 
-			vec3.sub(this._camera.position, this._camera.position, tempPos);
+			vec3.sub( this._camera.position, this._camera.position, tempPos );
 
 		}
 
-		if (this._activeKeys.includes("d")) {
+		if ( this._activeKeys.includes( "d" ) ) {
 
-			const tempPos = vec3.clone(this._camera.position);
+			const tempPos = vec3.clone( this._camera.position );
 
-			vec3.cross(tempPos, this._camera.forward, this._camera.up);
-			vec3.normalize(tempPos, tempPos);
+			vec3.cross( tempPos, this._camera.forward, this._camera.up );
+			vec3.normalize( tempPos, tempPos );
 
 			vec3.multiply(
 				tempPos,
 				tempPos,
-				vec3.fromValues(this._cameraSpeed, this._cameraSpeed, this._cameraSpeed)
+				vec3.fromValues( this._cameraSpeed, this._cameraSpeed, this._cameraSpeed )
 			);
-			vec3.add(this._camera.position, this._camera.position, tempPos);
+			vec3.add( this._camera.position, this._camera.position, tempPos );
 
 		}
 
-		if (this._activeKeys.includes("e")) {
+		if ( this._activeKeys.includes( "e" ) ) {
 
 			vec3.add(
 				this._camera.position,
 				this._camera.position,
-				vec3.fromValues(0, this._cameraSpeed, 0)
+				vec3.fromValues( 0, this._cameraSpeed, 0 )
 			);
 
 		}
 
-		if (this._activeKeys.includes("q")) {
+		if ( this._activeKeys.includes( "q" ) ) {
 
 			vec3.add(
 				this._camera.position,
 				this._camera.position,
-				vec3.fromValues(0, - this._cameraSpeed, 0)
+				vec3.fromValues( 0, - this._cameraSpeed, 0 )
 			);
 
 		}
 
 	}
 
-	update(delta?: number) {
+	update( delta?: number ) {
 
-		if (delta) this.processInputs(delta);
-		vec3.add(this._camera.target, this._camera.position, this._camera.forward);
-		this._camera.transform.lookAt(this._camera.target, this._camera.up);
+		if ( delta ) this.processInputs( delta );
+		vec3.add( this._camera.target, this._camera.position, this._camera.forward );
+		this._camera.transform.lookAt( this._camera.target, this._camera.up );
 
 		this._camera.update();
 
@@ -224,7 +224,7 @@ export default class CameraFPS {
 		return this._active;
 
 	}
-	public set active(value: boolean) {
+	public set active( value: boolean ) {
 
 		this._active = value;
 

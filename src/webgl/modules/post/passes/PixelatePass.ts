@@ -11,55 +11,55 @@ export default class PixelatePass extends Pass {
 	private _xPixels: number;
 	private _yPixels: number;
 
-	constructor(bolt: Bolt, {
+	constructor( bolt: Bolt, {
 		width = 256,
 		height = 256,
 		xPixels = 50,
 		yPixels = 50
-	}) {
+	} ) {
 
-		super(bolt, {
+		super( bolt, {
 			width,
 			height
-		});
+		} );
 
 		this._xPixels = xPixels;
 		this._yPixels = yPixels;
 
-		this.program = new Program(vertexShader, fragmentShader);
+		this.program = new Program( vertexShader, fragmentShader );
 		this.program.activate();
-		this.program.setFloat("xPixels", this._xPixels);
-		this.program.setFloat("yPixels", this._yPixels);
+		this.program.setFloat( "xPixels", this._xPixels );
+		this.program.setFloat( "yPixels", this._yPixels );
 
 	}
 
-	set pixelCountX(x: number) {
+	set pixelCountX( x: number ) {
 
 		this._xPixels = x;
 		this.program.activate();
-		this.program.setFloat("xPixels", x);
+		this.program.setFloat( "xPixels", x );
 
 	}
 
-	set pixelCountY(y: number) {
+	set pixelCountY( y: number ) {
 
 		this._yPixels = y;
 		this.program.activate();
-		this.program.setFloat("yPixels", y);
+		this.program.setFloat( "yPixels", y );
 
 	}
 
-	draw(readFBO: FBO, writeFbo: FBO, texture?: Texture2D, renderToScreen?: boolean) {
+	draw( readFBO: FBO, writeFbo: FBO, texture?: Texture2D, renderToScreen?: boolean ) {
 
-		if (!renderToScreen) {
+		if ( ! renderToScreen ) {
 
 			writeFbo.bind();
 
 		}
 
-		this.program.setTexture("map", texture ? texture : readFBO.targetTexture);
+		this.program.setTexture( "map", texture ? texture : readFBO.targetTexture );
 
-		this.fullScreenTriangle.draw(this.program);
+		this.fullScreenTriangle.draw( this.program );
 
 		readFBO.unbind();
 		writeFbo.unbind();

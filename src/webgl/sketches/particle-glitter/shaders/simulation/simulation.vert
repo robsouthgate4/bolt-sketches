@@ -8,18 +8,27 @@ layout(location = 2) in float oldLifeTime;
 
 layout(location = 3) in vec3 initPosition;
 layout(location = 4) in float initLife;
+layout(location = 5) in vec3 random;
+layout(location = 6) in float groupID;
 
 out vec3 newPosition;
 out vec3 newVelocity;
 out float newLifeTime;
 
 uniform float time;
+uniform float delta;
 uniform vec3 repellorPosition;
 uniform float repellorScale;
 uniform float repellorStrength;
 uniform float particleLifeRate;
 uniform float particleSpeed;
 uniform float curlStrength;
+
+#define SPLINE_POINTS 20
+#define LINE_COUNT 24
+#define PI 3.1415
+
+uniform vec3 splinePoints[SPLINE_POINTS];
 
 vec3 mod289(vec3 x) {
   return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -140,44 +149,111 @@ vec3 curlNoise(vec3 p) {
 
 }
 
+vec3 catmullRomSpline(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
+
+    float alpha = 1.0;
+    float tension = 0.0;
+
+    float t01 = pow(distance(p0, p1), alpha);
+    float t12 = pow(distance(p1, p2), alpha);
+    float t23 = pow(distance(p2, p3), alpha);
+
+    vec3 m1 = (1.0f - tension) *
+        (p2 - p1 + t12 * ((p1 - p0) / t01 - (p2 - p0) / (t01 + t12)));
+    vec3 m2 = (1.0f - tension) *
+        (p2 - p1 + t12 * ((p3 - p2) / t23 - (p3 - p1) / (t12 + t23)));
+
+    vec3 a = 2.0f * (p1 - p2) + m1 + m2;
+    vec3 b = -3.0f * (p1 - p2) - m1 - m1 - m2;
+    vec3 c = m1;
+    vec3 d = p1;
+
+    return a * t * t * t +
+            b * t * t +
+            c * t +
+            d;
+
+}
+
+mat4 rotation3d(vec3 axis, float angle) {
+
+  axis = normalize(axis);
+
+  float s = sin(angle);
+  float c = cos(angle);
+  float oc = 1.0 - c;
+
+  return mat4(
+    oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+    oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+    oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+    0.0,                                0.0,                                0.0,                                1.0
+  );
+
+}
+
 void main() {
 
-  vec3 gravity = vec3(0.0, 0.1, 0.0);
-
   vec3 pos = oldPosition;
+
+  vec3 splinePositionsA[SPLINE_POINTS];
+  vec3 splinePositionsB[SPLINE_POINTS];
+
+  float closest = 10000.;
+
+  // set initial points to be far away to avoid initial glitches
+  vec3 closestPoint = vec3( 1000.0 );
+
+  for ( int i = 0; i < SPLINE_POINTS - 3; i++ ) {
+
+    splinePositionsA[i] = catmullRomSpline( splinePoints[i], splinePoints[i+1], splinePoints[i+2], splinePoints[i+3], float(i) / float(SPLINE_POINTS - 3) );
+    splinePositionsB[i] = splinePositionsA[i];
+
+    // rotate the spline for the first group
+    splinePositionsB[i] = (rotation3d( vec3( 0., 1., 0. ), PI  ) * vec4( splinePositionsB[i], 1.0 )).xyz;
+    //splinePositionsB[i].xz *= 1.2;
+
+  }
+
+  // find the closes point along the spline to the particle
+  for( int i = 0; i < SPLINE_POINTS - 3; i++ ) {
+
+      vec3 p = mix(splinePositionsA[i], splinePositionsB[i], groupID);
+
+      float d = distance( pos, p );
+
+      if ( d < closest && pos.y > p.y ) {
+
+        closest = d;
+        closestPoint = mix(splinePositionsA[i], splinePositionsB[i], groupID);
+
+      }
+
+  }
+
+  vec3 gravity = vec3(0.0, 0.0007, 0.0);
+
   vec3 vel = oldVelocity;
 
-  vec3 attractorPosition = vec3( sin( time ) * 90.0, 0., cos( time ) * 90.0);
+  vec3 o = random * vec3( 0.02, 0.0, 0.02 );
 
-  vec3 attractorForce = normalize( attractorPosition - pos );
+  // set the velocity to the direction of the closest point on the spline
+  vec3 attractorForce = normalize( closestPoint - pos );
 
-  vel += attractorForce * 0.01;
-  vel += curlNoise((pos * ( 0.04 * curlStrength ) ) + (time * 0.01)) * 0.02;
-  vel *= 0.8;
-  pos += vel * particleSpeed;
+  vec3 c = curlNoise(pos * 5.0 + time) * 0.0001;
 
-  float repellor = distance( pos, repellorPosition );
-
-  if(distance( pos, repellorPosition ) <= repellorScale) {
-
-    vec3 repellorDirection = pos - repellorPosition;
-    vel += normalize(repellorDirection) * repellorStrength;
-
-  }
-
-  vec3 centerDirection = pos - vec3(0.0);
-
-  if(distance(pos, vec3(0.0)) >= 5.0) {
-
-    vel -= normalize(centerDirection) * 0.001;
-
-  }
+  vel += mix( c, c * 0.9, groupID );
+  vel += attractorForce * 0.0001;
+  vel *= 0.98;
+  pos += vel;
 
   float life = oldLifeTime;
 
+  pos += o * 0.1;
+
   life -= particleLifeRate;
 
-  if(life < 0.00001) {
+  if(life < 0.00001 || pos.y < -0.9) {
 
     pos = initPosition;
     life = initLife;

@@ -1,36 +1,41 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { CameraOrtho, CameraPersp, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, FRONT, Mesh, POINTS, Program, Texture2D, VBO } from "@/webgl/libs/bolt";
+import Bolt, { CameraOrtho, CameraPersp, CLAMP_TO_EDGE, DrawSet, DYNAMIC_DRAW, FBO, FLOAT, LINE_STRIP, Mesh, POINTS, Program, STATIC_DRAW, Texture2D, VBO } from "@/webgl/libs/bolt";
 
 import particlesVertexInstanced from "./shaders/particles/particles.vert";
 import particlesFragmentInstanced from "./shaders/particles/particles.frag";
 
-import depthVertexInstanced from "./shaders/depth/depth.vert";
-import depthFragmentInstanced from "./shaders/depth/depth.frag";
-
 import simulationVertex from "./shaders/simulation/simulation.vert";
 import simulationFragment from "./shaders/simulation/simulation.frag";
 
-import { mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 import Orbit from "@webgl/modules/orbit";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
 import DrawState from "@/webgl/modules/draw-state";
 import config from "./config";
-import GLTFLoader from "@/webgl/modules/gltf-loader";
-import { GUI } from "lil-gui"
+import { GUI } from "lil-gui";
 import EaseNumber from "@/webgl/helpers/EaseNumber";
 import Raycast from "@/webgl/modules/raycast";
-import EventListeners, { ITouchEvent } from "@/webgl/modules/event-listeners";
+import EventListeners from "@/webgl/modules/event-listeners";
 import Ray from "@/webgl/modules/raycast/Ray";
 import { GL_RESIZE_TOPIC, GL_TOUCH_MOVE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import Sphere from "@/webgl/modules/primitives/Sphere";
 
 import normalVertexShader from "./shaders/normal/normal.vert";
 import normalFragmentShader from "./shaders/normal/normal.frag";
+
+import splineVertexShader from "./shaders/spline/spline.vert";
+import splineFragmentShader from "./shaders/spline/spline.frag";
+
+import pointVertexShader from "./shaders/point/point.vert";
+import pointFragmentShader from "./shaders/point/point.frag";
+
 import EaseVec3 from "@/webgl/helpers/EaseVector3";
-import { getDeviceType } from "@/utils";
+import Post from "@/webgl/modules/post";
+import { catmullRomInterpolation, CatmullRom } from "@/webgl/modules/splines";
+import BokehPass from "@/webgl/modules/post/passes/BokehPass";
 
 export default class extends Base {
 
@@ -40,7 +45,15 @@ export default class extends Base {
 	camera!: CameraPersp;
 	assetsLoaded!: boolean;
 	simulationProgram!: Program;
-	simulationProgramLocations!: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initLifeTime: number; initPosition: number; };
+	simulationProgramLocations!: {
+		oldPosition: number;
+		oldVelocity: number;
+		oldLifeTime: number;
+		initLifeTime: number;
+		initPosition: number;
+		random: number;
+		groupID: number;
+	};
 	instanceCount = config.particleCount;
 	bolt: Bolt;
 	orbit!: Orbit;
@@ -55,14 +68,22 @@ export default class extends Base {
 	config: any;
 	maptcapDark!: Texture2D;
 	maptcapLight!: Texture2D;
-	colorEase = new EaseNumber(config.colorMode === "light" ? 0 : 1, 0.02);
+	colorEase = new EaseNumber( config.colorMode === "light" ? 0 : 1, 0.02 );
 	raycaster = new Raycast();
 	eventListeners = EventListeners.getInstance();
 	ray: Ray;
 	repellorDebug: DrawSet;
-	repellorTarget = new EaseVec3(0, 0, 0, 0.3);
+	repellorTarget = new EaseVec3( 0, 0, 0, 0.3 );
 	repellorPosition = vec3.create();
 	repellorPositinPrevious = vec3.create();
+	pointCount = 20;
+	lineCount = 24;
+	lineDrawState: FBO;
+	lineDrawSet: DrawSet;
+	pointDrawSet: DrawSet;
+	catmullRom: CatmullRom;
+	points: any[];
+	post: Post;
 
 	constructor() {
 
@@ -73,19 +94,26 @@ export default class extends Base {
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
 
-		this.canvas = <HTMLCanvasElement>document.getElementById("experience");
+		this.canvas = <HTMLCanvasElement>document.getElementById( "experience" );
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 
 		// initialize bolt
 		this.bolt = Bolt.getInstance();
-		this.bolt.init(this.canvas, { antialias: true, dpi: Math.min(2, window.devicePixelRatio), powerPreference: "high-performance" });
+		this.bolt.init( this.canvas, { antialias: true, dpi: Math.min( 2, window.devicePixelRatio ), powerPreference: "high-performance" } );
 
 		this.gl = this.bolt.getContext();
 
+		this.depthFBO = new FBO( { width: this.width, height: this.height, depth: true } );
+
+
 		this.repellorDebug = new DrawSet(
-			new Mesh(new Sphere()), new Program(normalVertexShader, normalFragmentShader)
+			new Mesh( new Sphere() ), new Program( normalVertexShader, normalFragmentShader )
 		);
+
+		this.repellorDebug.transform.scale = vec3.fromValues( 1, 1, 1 );
+
+		this.repellorDebug.transform.position = vec3.fromValues( 1, 0, - 8 );
 
 		this.initScene();
 		this.initSketch();
@@ -94,80 +122,150 @@ export default class extends Base {
 
 	}
 
-	initListeners() {
+	private initListeners() {
 
-		this.eventListeners.listen(GL_TOUCH_MOVE_TOPIC, (e: any) => {
+		this.eventListeners.listen( GL_TOUCH_MOVE_TOPIC, ( e: any ) => {
 
 			const { normalized } = e.detail;
 
-			const scale = vec3.distance(this.camera.position, this.camera.target);
+			const scale = vec3.distance( this.camera.position, this.camera.target );
 
-			this.ray = this.raycaster.generateRayFromCamera(normalized.x, normalized.y, this.camera);
+			this.ray = this.raycaster.generateRayFromCamera( normalized.x, normalized.y, this.camera );
 
-			const rayEnd = vec3.clone(this.ray.origin);
+			const rayEnd = vec3.clone( this.ray.origin );
 			const rayScaled = vec3.create();
 
-			vec3.multiply(rayScaled, this.ray.direction, vec3.fromValues(scale, scale, scale));
-			vec3.add(rayEnd, rayEnd, rayScaled);
+			vec3.multiply( rayScaled, this.ray.direction, vec3.fromValues( scale, scale, scale ) );
+			vec3.add( rayEnd, rayEnd, rayScaled );
 
-			this.repellorTarget.x = rayEnd[0];
-			this.repellorTarget.y = rayEnd[1];
-			this.repellorTarget.z = rayEnd[2];
+			this.repellorTarget.x = rayEnd[ 0 ];
+			this.repellorTarget.y = rayEnd[ 1 ];
+			this.repellorTarget.z = rayEnd[ 2 ];
 
-		});
+		} );
 
-		this.eventListeners.listen(GL_RESIZE_TOPIC, (e: any) => {
+		this.eventListeners.listen( GL_RESIZE_TOPIC, ( e: any ) => {
 
 			this.width = window.innerWidth;
 			this.height = window.innerHeight;
-			this.camera.updateProjection(this.width / this.height);
+			this.camera.updateProjection( this.width / this.height );
 
-		});
+		} );
 
 	}
 
 	// construct the scene
-	initScene() {
+	private initScene() {
 
-		this.camera = new CameraPersp({
+		this.camera = new CameraPersp( {
 			aspect: this.canvas.width / this.canvas.height,
 			fov: 45,
-			near: 0.1,
-			far: 1000,
-			position: vec3.fromValues(0, 30, 20),
-			target: vec3.fromValues(0, 1, 0),
-		});
+			near: 0.01,
+			far: 10,
+			position: vec3.fromValues( 0, 0, 2 ),
+			target: vec3.fromValues( 0, 0, 0 ),
+		} );
 
-		const frustumSize = 20;
-
-		this.shadowLight = new CameraOrtho({
-			left: - frustumSize,
-			right: frustumSize,
-			bottom: - frustumSize,
-			top: frustumSize,
-			near: 1,
-			far: 100,
-			position: vec3.fromValues(0, 15, 5),
-			target: vec3.fromValues(0, 0, 0),
-		});
-
-		mat4.multiply(this.lightSpaceMatrix, this.shadowLight.projection, this.shadowLight.view);
-
-		this.orbit = new Orbit(this.camera, {
-			minRadius: 5,
+		this.orbit = new Orbit( this.camera, {
+			minRadius: 0.3,
 			maxRadius: 50,
-			minElevation: -Math.PI * 0.5,
+			minElevation: - Math.PI * 0.5,
 			maxElevation: Math.PI * 0.5,
-			ease: 0.04,
-			zoomSpeed: 0.25,
-			disableOrbit: getDeviceType() === "mobile",
-		});
+			ease: 0.1,
+			zoomSpeed: 0.1,
+		} );
 
-		this.bolt.setCamera(this.camera);
-		this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
+		this.bolt.setCamera( this.camera );
+		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 		this.bolt.enableDepth();
 
+		this.post = new Post( this.bolt, { outputDepth: true } );
+
+		const bokehPass = new BokehPass( this.bolt, { width: this.width, height: this.height } );
+
+		this.post.add( bokehPass, true );
+
 		this.resize();
+
+
+	}
+
+	private getPointPositions( count: number ) {
+
+		const p = [];
+
+		for ( let i = 0; i < count; i ++ ) {
+
+			const x = Math.cos( i * 0.7 ) * 0.05;
+			const y = - ( i - count / 2 ) * 0.12;
+			const z = - Math.sin( i * 0.7 ) * 0.05;
+
+			p[ i ] = vec3.fromValues( x, y, z );
+
+		}
+
+		return p;
+
+	}
+
+	private createSpline( p0: vec3, p1: vec3, p2: vec3, p3: vec3 ) {
+
+		const curve: vec3[] = [];
+
+		for ( let i = 0; i < this.lineCount; i ++ ) {
+
+			const b = catmullRomInterpolation( p0, p1, p2, p3, i / this.lineCount );
+			curve[ i ] = b;
+
+		}
+
+		return curve;
+
+	}
+
+	private constructDebugSpline() {
+
+		const spline = [];
+		this.points = this.getPointPositions( this.pointCount );
+
+		this.catmullRom = new CatmullRom( this.points );
+
+		const pointAtTime = this.catmullRom.getPoint( 1 );
+
+		for ( let i = 0; i < this.pointCount - 3; i ++ ) {
+
+			const p = this.points;
+			spline[ i ] = this.createSpline( p[ i ], p[ i + 1 ], p[ i + 2 ], p[ i + 3 ] );
+
+		}
+
+		// create line segments for curve drawing
+		const flattenedPoints = [];
+
+		for ( let i = 0; i < spline.length; i ++ ) {
+
+			const segment = spline[ i ];
+
+			for ( let j = 0; j < segment.length; j ++ ) {
+
+				const p = segment[ j ];
+				flattenedPoints.push( p[ 0 ], p[ 1 ], p[ 2 ] );
+
+			}
+
+		}
+
+		const pointSplineMesh = new Mesh( {
+			positions: pointAtTime,
+		} ).setDrawType( POINTS );
+
+		const lineMesh = new Mesh( {
+			positions: new Float32Array( flattenedPoints )
+		} ).setDrawType( LINE_STRIP );
+
+		this.pointDrawSet = new DrawSet( pointSplineMesh, new Program( pointVertexShader, pointFragmentShader ) );
+		this.lineDrawSet = new DrawSet( lineMesh, new Program( splineVertexShader, splineFragmentShader ) );
+
 
 	}
 
@@ -175,17 +273,9 @@ export default class extends Base {
 	async initSketch() {
 
 
-		// check if particle count is in local storage
-		// if (localStorage.getItem("particleCount") !== null) {
+		this.constructDebugSpline();
 
-		// 	this.instanceCount = parseInt(localStorage.getItem("particleCount") as string);
-		// 	this.config.particleCount = this.instanceCount;
-
-		// }
-
-		this.depthFBO = new FBO({ width: 2048, height: 2048, depth: true });
-
-		this.particleProgram = new Program(particlesVertexInstanced, particlesFragmentInstanced);
+		this.particleProgram = new Program( particlesVertexInstanced, particlesFragmentInstanced );
 
 		const transformFeedbackVaryings = [
 			"newPosition",
@@ -198,43 +288,60 @@ export default class extends Base {
 			simulationFragment,
 			{
 				transformFeedbackVaryings
-			});
+			} );
 
 		this.simulationProgram.activate();
-		this.simulationProgram.setFloat("lifeTime", 4);
-		this.simulationProgram.setFloat("particleLifeRate", this.config.particleLifeRate);
-		this.simulationProgram.setFloat("particleLifeTime", this.config.particleLifeTime);
-		this.simulationProgram.setFloat("particleSpeed", this.config.particleSpeed);
-		this.simulationProgram.setFloat("repellorStrength", this.config.repellorStrength);
-		this.simulationProgram.setFloat("curlStrength", this.config.curlStrength);
-		this.simulationProgram.setFloat("time", 0);
+		this.simulationProgram.setFloat( "lifeTime", 4 );
+		this.simulationProgram.setFloat( "particleLifeRate", this.config.particleLifeRate );
+		this.simulationProgram.setFloat( "particleLifeTime", this.config.particleLifeTime );
+		this.simulationProgram.setFloat( "particleSpeed", this.config.particleSpeed );
+		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
+		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
+
+		this.points.forEach( ( p, i ) => {
+
+			this.simulationProgram.setVector3( `splinePoints[${ i }]`, p );
+
+		} );
+
+
+		this.simulationProgram.setFloat( "time", 0 );
 
 		this.simulationProgramLocations = {
 			"oldPosition": 0,
 			"oldVelocity": 1,
 			"oldLifeTime": 2,
 			"initPosition": 3,
-			"initLifeTime": 4
+			"initLifeTime": 4,
+			"random": 5,
+			"groupID": 6,
 		};
 
-		this.transformFeedback = new TransformFeedback({ bolt: this.bolt, count: this.instanceCount });
+		this.transformFeedback = new TransformFeedback( { bolt: this.bolt, count: this.instanceCount } );
 
-		this.maptcapDark = new Texture2D({
-			imagePath: "/static/textures/matcap/matcap-black.jpeg",
-			wrapS: this.gl.CLAMP_TO_EDGE,
-			wrapT: this.gl.CLAMP_TO_EDGE,
-		});
+		this.maptcapDark = new Texture2D( {
+			imagePath: "/static/textures/matcap/blue-matcap.jpg",
+			wrapS: CLAMP_TO_EDGE,
+			wrapT: CLAMP_TO_EDGE,
+		} );
 
-		this.maptcapLight = new Texture2D({
+		this.maptcapLight = new Texture2D( {
 			imagePath: "/static/textures/matcap/gold-matcap.jpeg",
-			wrapS: this.gl.CLAMP_TO_EDGE,
-			wrapT: this.gl.CLAMP_TO_EDGE,
-		});
+			wrapS: CLAMP_TO_EDGE,
+			wrapT: CLAMP_TO_EDGE,
+		} );
 
 		await this.maptcapDark.load();
 		await this.maptcapLight.load();
 
 		this.assetsLoaded = true;
+
+		this._initMesh();
+
+	}
+
+	private _initMesh() {
+
 
 		const positions: number[] = [];
 		const offsets: number[] = [];
@@ -242,48 +349,60 @@ export default class extends Base {
 		const lifeTimes: number[] = [];
 		const normals: number[] = [];
 		const scales: number[] = [];
+		const randoms: number[] = [];
+		const groupIds: number[] = [];
+		const indices: number[] = [];
 
 
-		const n = 20;
-		const n2 = n / 2;
+		for ( let i = 0; i < this.instanceCount; i ++ ) {
 
-		for (let i = 0; i < this.instanceCount; i++) {
+			indices.push( i );
 
+			const groupID = Math.floor( Math.random() * 2 );
+			groupIds.push( groupID );
 
-			lifeTimes.push((Math.random() + 0.5) * 20);
+			lifeTimes.push( ( Math.random() + 0.5 ) * 10 );
 
-			const positionX = Math.random() * n - n2;
-			const positionY = Math.random() * n - n2;
-			const positionZ = Math.random() * n - n2;
+			randoms.push(
+				Math.random() * 2 - 1,
+				Math.random() * 2 - 1,
+				Math.random() * 2 - 1
+			);
 
-			offsets.push(positionX, positionY, positionZ)
+			const positionX = this.points[ 0 ][ 0 ] + ( Math.random() * 2 - 1 ) * 0.2;
+			const positionY = this.points[ 0 ][ 1 ] + Math.random() * 2.0;
+			const positionZ = this.points[ 0 ][ 2 ] + ( Math.random() * 2 - 1 ) * 0.2;
+
+			offsets.push( positionX, positionY, positionZ );
 
 			const normal = Math.random() * 2 - 1;
-			const scale = (Math.random() * 0.5 + 0.5) + 0.25;
+			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.1;
 
-			positions.push(positionX, positionY, positionZ);
+			positions.push( positionX, positionY, positionZ );
 
-			scales.push(scale)
-			normals.push(normal, normal, normal);
+			scales.push( scale );
+			normals.push( normal, normal, normal );
 
-			velocities.push((Math.random() * 2 - 1) * 0.2);
-			velocities.push((Math.random() * 2 - 1) * 0.2);
-			velocities.push((Math.random() * 2 - 1) * 0.2);
+			velocities.push( 0, 0, 0 );
 
 		}
 
+
 		// buffers
-		const offset1VBO = new VBO(new Float32Array(offsets), DYNAMIC_DRAW);
-		const offset2VBO = new VBO(new Float32Array(offsets), DYNAMIC_DRAW);
+		const offset1VBO = new VBO( new Float32Array( offsets ), DYNAMIC_DRAW );
+		const offset2VBO = new VBO( new Float32Array( offsets ), DYNAMIC_DRAW );
 
-		const velocity1VBO = new VBO(new Float32Array(velocities), DYNAMIC_DRAW);
-		const velocity2VBO = new VBO(new Float32Array(velocities), DYNAMIC_DRAW);
+		const velocity1VBO = new VBO( new Float32Array( velocities ), DYNAMIC_DRAW );
+		const velocity2VBO = new VBO( new Float32Array( velocities ), DYNAMIC_DRAW );
 
-		const life1VBO = new VBO(new Float32Array(lifeTimes), DYNAMIC_DRAW);
-		const life2VBO = new VBO(new Float32Array(lifeTimes), DYNAMIC_DRAW);
+		const life1VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
+		const life2VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 
-		const init1VBO = new VBO(new Float32Array(offsets), DYNAMIC_DRAW);
-		const initLife1VBO = new VBO(new Float32Array(lifeTimes), DYNAMIC_DRAW);
+		const init1VBO = new VBO( new Float32Array( offsets ), STATIC_DRAW );
+		const initLife1VBO = new VBO( new Float32Array( lifeTimes ), STATIC_DRAW );
+		const randomsVBO = new VBO( new Float32Array( randoms ), STATIC_DRAW );
+		const groupsVBO = new VBO( new Float32Array( groupIds ), STATIC_DRAW );
+
 
 		this.transformFeedback.bindVAOS(
 			[
@@ -321,69 +440,61 @@ export default class extends Base {
 					attributeLocation: this.simulationProgramLocations.initLifeTime,
 					size: 1,
 					requiresSwap: false
+				},
+				{
+					vbo1: randomsVBO,
+					vbo2: randomsVBO,
+					attributeLocation: this.simulationProgramLocations.random,
+					size: 3,
+					requiresSwap: false
+				},
+				{
+					vbo1: groupsVBO,
+					vbo2: groupsVBO,
+					attributeLocation: this.simulationProgramLocations.groupID,
+					size: 1,
+					requiresSwap: false
 				}
 			]
 		);
 
-		const pp = new Program(particlesVertexInstanced, particlesFragmentInstanced);
+		const pp = new Program( particlesVertexInstanced, particlesFragmentInstanced );
 
-		const pointMesh = new Mesh({
+		const pointMesh = new Mesh( {
 			positions,
-			normals
-		}).setDrawType(POINTS);
+			normals,
+			indices,
+		} ).setDrawType( POINTS );
 
-		pointMesh.setAttribute(new Float32Array(scales), 1, 7);
-		pointMesh.setVBO(offset1VBO, 3, 2);
+		pointMesh.setAttribute( new Float32Array( scales ), 1, 7 );
+		pointMesh.setVBO( offset1VBO, 3, 2 );
 
-		const pointMeshShadow = new Mesh({
-			positions,
-			normals
-		}).setDrawType(POINTS);
+		const particleDrawSet = new DrawSet( pointMesh, pp );
 
-		console.log(pointMesh);
-
-		const particleDrawSet = new DrawSet(pointMesh, pp);
-
-		const dp = new Program(depthVertexInstanced, depthFragmentInstanced);
-
-		const depthDrawSet = new DrawSet(pointMeshShadow, dp);
-
-		const bg = this.config[this.config.colorMode].backgroundColor;
+		const bg = this.config[ this.config.colorMode ].backgroundColor;
 
 		// prepare draw states
 
-		// this.depthDrawState = new DrawState(this.bolt)
-		// 	.setDrawSet(depthDrawSet)
-		// 	.setVbo(velocity1VBO, 3, 6, FLOAT, 0, 1)
-		// 	.setVbo(life1VBO, 1, 4, FLOAT, 0, 1)
-		// 	.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 1)
-		// 	.setVbo(offset1VBO, 3, 2, FLOAT, 0, 1)
-		// 	.setFbo(this.depthFBO)
-		// 	.uniformFloat("particleScale", this.config.particleScale)
-		// 	.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
-		// 	.setViewport(0, 0, this.depthFBO.width, this.depthFBO.height)
-		// 	.clear(0, 0, 0, 1)
-
-		this.particleDrawState = new DrawState(this.bolt)
-			.setDrawSet(particleDrawSet)
-			.setVbo(velocity1VBO, 3, 6, FLOAT, 0, 0)
-			.setVbo(life1VBO, 1, 4, FLOAT, 0, 0)
-			.setVbo(initLife1VBO, 1, 5, FLOAT, 0, 0)
-			.setVbo(offset1VBO, 3, 2, FLOAT, 0, 0)
-			.uniformTexture("mapDepth", this.depthFBO.depthTexture!)
-			.uniformFloat("shadowStrength", this.config.shadowStrength)
-			.uniformFloat("particleScale", this.config.particleScale)
-			.uniformFloat("colorMode", this.config.colorMode === "light" ? 0 : 1)
-			.uniformMatrix4("lightSpaceMatrix", this.lightSpaceMatrix)
-			.uniformTexture("mapMatcapLight", this.maptcapLight)
-			.uniformTexture("mapMatcapDark", this.maptcapDark)
-			.setViewport(0, 0, this.canvas.width, this.canvas.height)
-			.clear(bg[0], bg[1], bg[2], bg[3])
-
+		this.particleDrawState = new DrawState( this.bolt )
+			.setDrawSet( particleDrawSet )
+			.setVbo( velocity1VBO, 3, 6, FLOAT, 0, 0 )
+			.setVbo( life1VBO, 1, 4, FLOAT, 0, 0 )
+			.setVbo( initLife1VBO, 1, 5, FLOAT, 0, 0 )
+			.setVbo( offset1VBO, 3, 2, FLOAT, 0, 0 )
+			.setVbo( randomsVBO, 3, 8, FLOAT, 0, 0 )
+			.setVbo( groupsVBO, 1, 9, FLOAT, 0, 0 )
+			.uniformTexture( "mapDepth", this.depthFBO.depthTexture! )
+			.uniformFloat( "shadowStrength", this.config.shadowStrength )
+			.uniformFloat( "particleScale", this.config.particleScale )
+			.uniformFloat( "colorMode", this.config.colorMode === "light" ? 0 : 1 )
+			.uniformTexture( "mapMatcapLight", this.maptcapLight )
+			.uniformTexture( "mapMatcapDark", this.maptcapDark )
+			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
+			.clear( bg[ 0 ], bg[ 1 ], bg[ 2 ], bg[ 3 ] );
 
 	}
 
-	initGUI() {
+	private initGUI() {
 
 		const gui = new GUI();
 
@@ -428,56 +539,66 @@ export default class extends Base {
 
 	}
 
-	resize() {
+	private resize() {
 
 
-		this.bolt.resizeFullScreen();
-		this.camera.updateProjection(this.canvas.width / this.canvas.height);
+		this.bolt.resizeCanvasToDisplay();
+		this.post.resize( this.canvas.width, this.canvas.height );
+		this.camera.updateProjection( this.canvas.width / this.canvas.height );
 
 	}
 
-	earlyUpdate(elapsed: number, delta: number) {
+	earlyUpdate( elapsed: number, delta: number ) {
 
 		return;
 
 	}
 
-	update(elapsed: number, delta: number) {
+	update( elapsed: number, delta: number ) {
 
-		if (!this.assetsLoaded) return;
+
+		if ( ! this.assetsLoaded ) return;
 
 		this.orbit.update();
 
-		vec3.set(this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z);
+		vec3.set( this.repellorPosition, this.repellorTarget.x, this.repellorTarget.y, this.repellorTarget.z );
 
-		let d = vec3.distance(this.repellorPosition, this.repellorPositinPrevious);
-		d = Math.min(d, 1) * 10;
+		let d = vec3.distance( this.repellorPosition, this.repellorPositinPrevious );
+		d = Math.min( d, 1 ) * 10;
 
 		this.simulationProgram.activate();
-		this.simulationProgram.setFloat("time", elapsed);
-		this.simulationProgram.setVector3("repellorPosition", this.repellorPosition);
-		this.simulationProgram.setFloat("repellorScale", d);
-		this.transformFeedback.compute();
+		this.simulationProgram.setFloat( "time", elapsed );
+		this.simulationProgram.setVector3( "repellorPosition", this.repellorPosition );
+		this.simulationProgram.setFloat( "repellorScale", d );
+		this.simulationProgram.setFloat( "delta", delta );
 
-		//this.depthDrawState.draw()
+		this.transformFeedback.compute();
 
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
 
-		this.particleDrawState
-			.uniformFloat("colorMode", this.colorEase.value)
-			.clear(
-				bgLight[0] * (1 - this.colorEase.value) + bgDark[0] * (this.colorEase.value),
-				bgLight[1] * (1 - this.colorEase.value) + bgDark[1] * (this.colorEase.value),
-				bgLight[2] * (1 - this.colorEase.value) + bgDark[2] * (this.colorEase.value),
-				bgLight[3] * (1 - this.colorEase.value) + bgDark[3] * (this.colorEase.value))
-			.draw()
+		this.post.begin();
 
-		vec3.copy(this.repellorPositinPrevious, this.repellorPosition);
+		this.particleDrawState
+			.uniformFloat( "colorMode", this.colorEase.value )
+			.uniformFloat( "time", elapsed )
+			.clear(
+				bgLight[ 0 ] * ( 1 - this.colorEase.value ) + bgDark[ 0 ] * ( this.colorEase.value ),
+				bgLight[ 1 ] * ( 1 - this.colorEase.value ) + bgDark[ 1 ] * ( this.colorEase.value ),
+				bgLight[ 2 ] * ( 1 - this.colorEase.value ) + bgDark[ 2 ] * ( this.colorEase.value ),
+				bgLight[ 3 ] * ( 1 - this.colorEase.value ) + bgDark[ 3 ] * ( this.colorEase.value ) )
+			.draw();
+
+
+		// vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
+
+		//this.bolt.draw( this.lineDrawSet );
+
+		this.post.end();
 
 	}
 
-	lateUpdate(elapsed: number, delta: number) {
+	lateUpdate( elapsed: number, delta: number ) {
 
 		return;
 

@@ -144,7 +144,6 @@ export default class Texture2D extends Texture {
 
 	load() {
 
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 
 			const image = new Image();

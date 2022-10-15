@@ -34,14 +34,15 @@ export default class Mesh {
 	private _drawType: number;
 	private _bounds: BoxBounds = { min: vec3.create(), max: vec3.create() };
 	private _isSkinMesh = false;
+	private _lineWidth?: number;
 
-	constructor(geometry?: GeometryBuffers, params?: MeshParams) {
+	constructor( geometry?: GeometryBuffers, params?: MeshParams ) {
 
 		this._gl = Bolt.getInstance().getContext();
 
 		this._drawType = TRIANGLES; // default draw mode
 
-		if (geometry) {
+		if ( geometry ) {
 
 			this._buffers.positions = geometry.positions;
 			this._buffers.normals = geometry.normals;
@@ -57,17 +58,17 @@ export default class Mesh {
 
 		this._linkDefaultBuffers();
 
-		if (this._buffers.indices && this._buffers.indices.length > 0) {
+		if ( this._buffers.indices && this._buffers.indices.length > 0 ) {
 
-			if (this._instanced) {
+			if ( this._instanced ) {
 
 				// use higher precision for instanced meshes
 
-				this._ibo = new IBO(new Uint32Array(this._buffers.indices));
+				this._ibo = new IBO( new Uint32Array( this._buffers.indices ) );
 
 			} else {
 
-				this._ibo = new IBO(new Uint16Array(this._buffers.indices));
+				this._ibo = new IBO( new Uint16Array( this._buffers.indices ) );
 
 			}
 
@@ -75,9 +76,17 @@ export default class Mesh {
 
 	}
 
-	setDrawType(type: number) {
+	setDrawType( type: number ) {
 
 		this._drawType = type;
+
+		return this;
+
+	}
+
+	setLineWidth( width: number ) {
+
+		this._lineWidth = width;
 
 		return this;
 
@@ -92,7 +101,7 @@ export default class Mesh {
 		divisor: number | undefined = undefined
 	) {
 
-		const vbo = new VBO(buffer);
+		const vbo = new VBO( buffer );
 
 		this._vao.bind();
 		this._vao.linkAttrib(
@@ -140,19 +149,19 @@ export default class Mesh {
 	 */
 	private _storeFaces() {
 
-		if (!this._buffers.indices || !this._buffers.positions) return;
+		if ( ! this._buffers.indices || ! this._buffers.positions ) return;
 
 		let ia, ib, ic;
 		let a, b, c;
 
 		// construct vertex vectors
-		for (let i = 0; i < this._buffers.positions.length; i += 3) {
+		for ( let i = 0; i < this._buffers.positions.length; i += 3 ) {
 
 			this._vertices.push(
 				[
-					this._buffers.positions[i + 0],
-					this._buffers.positions[i + 1],
-					this._buffers.positions[i + 2],
+					this._buffers.positions[ i + 0 ],
+					this._buffers.positions[ i + 1 ],
+					this._buffers.positions[ i + 2 ],
 
 				]
 			);
@@ -160,22 +169,22 @@ export default class Mesh {
 		}
 
 		// generate face data
-		for (let i = 0; i < this._buffers.indices.length; i += 3) {
+		for ( let i = 0; i < this._buffers.indices.length; i += 3 ) {
 
-			ia = this._buffers.indices[i];
-			ib = this._buffers.indices[i + 1];
-			ic = this._buffers.indices[i + 2];
+			ia = this._buffers.indices[ i ];
+			ib = this._buffers.indices[ i + 1 ];
+			ic = this._buffers.indices[ i + 2 ];
 
-			a = this._vertices[ia];
-			b = this._vertices[ib];
-			c = this._vertices[ic];
+			a = this._vertices[ ia ];
+			b = this._vertices[ ib ];
+			c = this._vertices[ ic ];
 
 			const face: Face = {
-				indices: [ia, ib, ic],
-				vertices: [a, b, c],
+				indices: [ ia, ib, ic ],
+				vertices: [ a, b, c ],
 			};
 
-			this._faces.push(face);
+			this._faces.push( face );
 
 		}
 
@@ -183,9 +192,9 @@ export default class Mesh {
 
 	private _linkDefaultBuffers() {
 
-		const positionVbo = new VBO(new Float32Array(this._buffers.positions!));
-		const normalVbo = new VBO(new Float32Array(this._buffers.normals!));
-		const uvVbo = new VBO(new Float32Array(this._buffers.uvs!));
+		const positionVbo = new VBO( new Float32Array( this._buffers.positions! ) );
+		const normalVbo = new VBO( new Float32Array( this._buffers.normals! ) );
+		const uvVbo = new VBO( new Float32Array( this._buffers.uvs! ) );
 
 		this._vao.bind();
 
@@ -198,7 +207,7 @@ export default class Mesh {
 			0 * 4
 		);
 
-		if (this._buffers.normals && this._buffers.normals.length > 0) {
+		if ( this._buffers.normals && this._buffers.normals.length > 0 ) {
 
 			this._vao.linkAttrib(
 				normalVbo,
@@ -211,7 +220,7 @@ export default class Mesh {
 
 		}
 
-		if (this._buffers.uvs && this._buffers.uvs.length > 0) {
+		if ( this._buffers.uvs && this._buffers.uvs.length > 0 ) {
 
 			this._vao.linkAttrib(
 				uvVbo,
@@ -224,9 +233,9 @@ export default class Mesh {
 
 		}
 
-		if (this._instanced && this._instanceMatrices) {
+		if ( this._instanced && this._instanceMatrices ) {
 
-			const instancedVBO = new VBOInstanced(this._instanceMatrices);
+			const instancedVBO = new VBOInstanced( this._instanceMatrices );
 			instancedVBO.bind();
 
 			const bytesMatrix = 4 * 16;
@@ -265,10 +274,10 @@ export default class Mesh {
 				3 * bytesVec4
 			);
 
-			this._gl.vertexAttribDivisor(3, 1);
-			this._gl.vertexAttribDivisor(4, 1);
-			this._gl.vertexAttribDivisor(5, 1);
-			this._gl.vertexAttribDivisor(6, 1);
+			this._gl.vertexAttribDivisor( 3, 1 );
+			this._gl.vertexAttribDivisor( 4, 1 );
+			this._gl.vertexAttribDivisor( 5, 1 );
+			this._gl.vertexAttribDivisor( 6, 1 );
 
 			instancedVBO.unbind();
 
@@ -285,7 +294,7 @@ export default class Mesh {
 
 	calculateBoxBounds() {
 
-		if (!this._buffers.positions || this.positions?.length === 0) {
+		if ( ! this._buffers.positions || this.positions?.length === 0 ) {
 
 			this._bounds = {
 				min: vec3.create(),
@@ -299,22 +308,22 @@ export default class Mesh {
 		const min = vec3.create();
 		const max = vec3.create();
 
-		for (let i = 0; i < this._buffers.positions.length / 3; i++) {
+		for ( let i = 0; i < this._buffers.positions.length / 3; i ++ ) {
 
-			const v = vec3.fromValues(this._buffers.positions[i * 3 + 0], this._buffers.positions[i * 3 + 1], this._buffers.positions[i * 3 + 2]);
+			const v = vec3.fromValues( this._buffers.positions[ i * 3 + 0 ], this._buffers.positions[ i * 3 + 1 ], this._buffers.positions[ i * 3 + 2 ] );
 
-			if (v[0] < min[0])
-				min[0] = v[0];
-			else if (v[0] > max[0])
-				max[0] = v[0];
-			if (v[1] < min[1])
-				min[1] = v[1];
-			else if (v[1] > max[1])
-				max[1] = v[1];
-			if (v[2] < min[2])
-				min[2] = v[2];
-			else if (v[2] > max[2])
-				max[2] = v[2];
+			if ( v[ 0 ] < min[ 0 ] )
+				min[ 0 ] = v[ 0 ];
+			else if ( v[ 0 ] > max[ 0 ] )
+				max[ 0 ] = v[ 0 ];
+			if ( v[ 1 ] < min[ 1 ] )
+				min[ 1 ] = v[ 1 ];
+			else if ( v[ 1 ] > max[ 1 ] )
+				max[ 1 ] = v[ 1 ];
+			if ( v[ 2 ] < min[ 2 ] )
+				min[ 2 ] = v[ 2 ];
+			else if ( v[ 2 ] > max[ 2 ] )
+				max[ 2 ] = v[ 2 ];
 
 		}
 
@@ -325,17 +334,17 @@ export default class Mesh {
 
 	}
 
-	private _bindTextures(program: Program) {
+	private _bindTextures( program: Program ) {
 
-		if (!program) return;
+		if ( ! program ) return;
 
-		if (program.textures && program.textures.length > 0) {
+		if ( program.textures && program.textures.length > 0 ) {
 
-			for (let i = 0; i < program.textures.length; i++) {
+			for ( let i = 0; i < program.textures.length; i ++ ) {
 
-				const textureObject = program.textures[i];
+				const textureObject = program.textures[ i ];
 
-				textureObject.texture.textureUnit(program, textureObject.uniformName, i);
+				textureObject.texture.textureUnit( program, textureObject.uniformName, i );
 				textureObject.texture.bind();
 
 			}
@@ -366,17 +375,23 @@ export default class Mesh {
 	 * Render bound mesh
 	 * @param  {Program} program
 	 */
-	draw(program: Program, node?: Node) {
+	draw( program: Program, node?: Node ) {
 
-		this._bindTextures(program);
+		this._bindTextures( program );
+
+		if ( this._lineWidth ) {
+
+			this._gl.lineWidth( this._lineWidth );
+
+		}
 
 		this._vao.bind();
 
-		if (this._buffers.indices && this._buffers.indices.length > 0) {
+		if ( this._buffers.indices && this._buffers.indices.length > 0 ) {
 
 			this._ibo.bind();
 
-			if (this._instanced && this._instanceCount) {
+			if ( this._instanced && this._instanceCount ) {
 
 				this._gl.drawElementsInstanced(
 					this._drawType,
@@ -401,9 +416,9 @@ export default class Mesh {
 
 		} else {
 
-			if (this._instanced && this._instanceCount) {
+			if ( this._instanced && this._instanceCount ) {
 
-				if (!this._buffers.positions) return;
+				if ( ! this._buffers.positions ) return;
 
 				this._gl.drawArraysInstanced(
 					this._drawType,
@@ -414,9 +429,9 @@ export default class Mesh {
 
 			} else {
 
-				if (!this._buffers.positions) return;
+				if ( ! this._buffers.positions ) return;
 
-				this._gl.drawArrays(this._drawType, 0, this._buffers.positions.length / 3);
+				this._gl.drawArrays( this._drawType, 0, this._buffers.positions.length / 3 );
 
 			}
 
@@ -432,7 +447,7 @@ export default class Mesh {
 
 	}
 
-	public set drawType(value) {
+	public set drawType( value ) {
 
 		this._drawType = value;
 
@@ -443,7 +458,7 @@ export default class Mesh {
 		return this._bounds;
 
 	}
-	public set bounds(value: BoxBounds) {
+	public set bounds( value: BoxBounds ) {
 
 		this._bounds = value;
 
@@ -455,7 +470,7 @@ export default class Mesh {
 
 	}
 
-	public set indices_(value: number[] | Uint16Array | undefined) {
+	public set indices_( value: number[] | Uint16Array | undefined ) {
 
 		this._buffers.indices = value;
 
@@ -467,7 +482,7 @@ export default class Mesh {
 
 	}
 
-	public set positions(value: number[] | Float32Array | undefined) {
+	public set positions( value: number[] | Float32Array | undefined ) {
 
 		this._buffers.positions = value;
 
@@ -479,7 +494,7 @@ export default class Mesh {
 
 	}
 
-	public set normals(value: number[] | Float32Array | undefined) {
+	public set normals( value: number[] | Float32Array | undefined ) {
 
 		this._buffers.normals = value;
 
@@ -491,7 +506,7 @@ export default class Mesh {
 
 	}
 
-	public set uvs(value: number[] | Float32Array | undefined) {
+	public set uvs( value: number[] | Float32Array | undefined ) {
 
 		this._buffers.uvs = value;
 
@@ -502,7 +517,7 @@ export default class Mesh {
 		return this._buffers;
 
 	}
-	public set buffers(value: GeometryBuffers) {
+	public set buffers( value: GeometryBuffers ) {
 
 		this._buffers = value;
 
@@ -519,7 +534,7 @@ export default class Mesh {
 		return this._isSkinMesh;
 
 	}
-	public set isSkinMesh(value) {
+	public set isSkinMesh( value ) {
 
 		this._isSkinMesh = value;
 
@@ -530,7 +545,7 @@ export default class Mesh {
 		return this._vao;
 
 	}
-	public set vao(value: VAO) {
+	public set vao( value: VAO ) {
 
 		this._vao = value;
 

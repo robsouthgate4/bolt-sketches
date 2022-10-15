@@ -9,28 +9,28 @@ export default class CopyPass extends Pass {
 
 	program!: Program;
 
-	constructor(bolt: Bolt, {
+	constructor( bolt: Bolt, {
 		width = 256,
 		height = 256,
 		texture
-	}: { width: number, height: number, texture?: Texture2D }) {
+	}: { width: number, height: number, texture?: Texture2D } ) {
 
-		super(bolt, {
+		super( bolt, {
 			width,
 			height,
 			texture
-		});
+		} );
 
 		this._texture = texture;
 
-		this.program = new Program(vertexShader, fragmentShader);
+		this.program = new Program( vertexShader, fragmentShader );
 		this.program.activate();
 
 	}
 
-	draw(readFBO: FBO, writeFbo: FBO, texture?: Texture2D, renderToScreen?: boolean) {
+	draw( readFBO: FBO, writeFbo: FBO, texture?: Texture2D, renderToScreen?: boolean ) {
 
-		if (!renderToScreen) {
+		if ( ! renderToScreen ) {
 
 			writeFbo.bind();
 
@@ -38,9 +38,9 @@ export default class CopyPass extends Pass {
 
 
 		this.program.activate();
-		this.program.setTexture("map", texture ? texture : readFBO.targetTexture);
+		this.program.setTexture( "map", texture ? texture : readFBO.targetTexture );
 
-		this.fullScreenTriangle.draw(this.program);
+		this.fullScreenTriangle.draw( this.program );
 
 		readFBO.unbind();
 		writeFbo.unbind();
