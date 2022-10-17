@@ -336,11 +336,11 @@ export default class extends Base {
 
 		this.assetsLoaded = true;
 
-		this._initMesh();
+		this.initMesh();
 
 	}
 
-	private _initMesh() {
+	private initMesh() {
 
 
 		const positions: number[] = [];
