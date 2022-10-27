@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { Program, Transform, Mesh, Texture2D, CameraPersp, CLAMP_TO_EDGE, LINEAR, SRC_ALPHA, ONE_MINUS_SRC_ALPHA, FRONT, BACK, DrawSet, VBO, DYNAMIC_DRAW, STATIC_DRAW, POINTS, FLOAT } from "@/webgl/libs/bolt";
+import Bolt, { Program, Transform, Mesh, Texture2D, CameraPersp, CLAMP_TO_EDGE, LINEAR, SRC_ALPHA, ONE_MINUS_SRC_ALPHA, FRONT, BACK, DrawSet, VBO, DYNAMIC_DRAW, STATIC_DRAW, POINTS, FLOAT, RGBA32f, NEAREST, RGBA16F, RGBA } from "@/webgl/libs/bolt";
 
 import raymarchVertexShader from "./shaders/raymarch/raymarch.vert";
 import raymarchFragmentShader from "./shaders/raymarch/raymarch.frag";
@@ -24,11 +24,12 @@ import DrawState from "@/webgl/modules/draw-state";
 import EaseNumber from "@/webgl/helpers/EaseNumber";
 import { GL_RESIZE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import EventListeners from "@/webgl/modules/event-listeners";
-
+import parseHdr from "@/webgl/modules/hdr-parse";
+import PLYParser from "@/webgl/modules/ply-parse";
 export default class extends Base {
 
 	canvas: HTMLCanvasElement;
-	program: Program;
+	visualiseProgram: Program;
 	lightPosition: vec3;
 	camera: CameraPersp;
 	assetsLoaded!: boolean;
@@ -40,12 +41,24 @@ export default class extends Base {
 	particleProgram: Program;
 	simulationProgram: Program;
 	config: any;
-	simulationProgramLocations: { oldPosition: number; oldVelocity: number; oldLifeTime: number; initPosition: number; initLifeTime: number; random: number; groupID: number; };
-	instanceCount = 50000;
+	simulationProgramLocations: {
+		oldPosition: number;
+		oldVelocity: number;
+		oldLifeTime: number;
+		initPosition: number;
+		initLifeTime: number;
+		random: number;
+		groupID: number;
+		particleID: number; };
+	pointCount = 256 * 256;
 	transformFeedback: TransformFeedback;
 	particleDrawState: DrawState;
 	colorEase = new EaseNumber( config.colorMode === "light" ? 0 : 1, 0.02 );
 	eventListeners = EventListeners.getInstance();
+	volumeNormalTexture: Texture2D;
+	volumeDistanceTexture: Texture2D;
+	pointCloudTexture: Texture2D;
+	pointCloud: Float32Array;
 
 	constructor() {
 
@@ -61,9 +74,9 @@ export default class extends Base {
 		this.canvas.height = this.height;
 
 		this.bolt = Bolt.getInstance();
-		this.bolt.init( this.canvas, { antialias: true, powerPreference: "high-performance" } );
+		this.bolt.init( this.canvas, { antialias: true, dpi: Math.min( 2, window.devicePixelRatio ), powerPreference: "high-performance" } );
 
-		this.program = new Program( raymarchVertexShader, raymarchFragmentShader );
+		this.visualiseProgram = new Program( raymarchVertexShader, raymarchFragmentShader );
 		this.lightPosition = vec3.fromValues( 0, 10, 0 );
 
 		this.camera = new CameraPersp( {
@@ -71,11 +84,13 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 2, 0, 4 ),
+			position: vec3.fromValues( 2, 0, 1 ),
 			target: vec3.fromValues( 0, 0, 0 ),
 		} );
 
-		this.orbit = new Orbit( this.camera );
+		this.orbit = new Orbit( this.camera, {
+			zoomSpeed: 0.1,
+		} );
 
 		this.post = new Post( this.bolt );
 
@@ -98,29 +113,46 @@ export default class extends Base {
 
 		const geometry = new Cube( { widthSegments: 1, heightSegments: 1, depthSegments: 1 } );
 
-		const volumeTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/volume-rubber.png",
+		const pointsPLY = await fetch( "/static/models/ply/toy-no-col.ply" );
+		const pointsPLYText = await pointsPLY.text();
+		const parsedPLY = new PLYParser().parse( pointsPLYText );
+		this.pointCloud = new Float32Array( parsedPLY.points );
+
+
+		this.volumeNormalTexture = new Texture2D( {
+			imagePath: "/static/textures/volumes/toy-normal.png",
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
-			minFilter: LINEAR,
-			magFilter: LINEAR,
+			minFilter: NEAREST,
+			magFilter: NEAREST,
 			generateMipmaps: false,
 		} );
 
-		await volumeTexture.load();
+		await this.volumeNormalTexture.load();
 
+		this.volumeDistanceTexture = new Texture2D( {
+			imagePath: "/static/textures/volumes/toy-distance.png",
+			wrapS: CLAMP_TO_EDGE,
+			wrapT: CLAMP_TO_EDGE,
+			minFilter: NEAREST,
+			magFilter: NEAREST,
+			generateMipmaps: false,
+		} );
+
+		await this.volumeDistanceTexture.load();
 
 		this.assetsLoaded = true;
 
-		this.program.activate();
-		this.program.setTexture( "mapVolume", volumeTexture );
-		this.program.transparent = true;
-		this.program.blendFunction = { src: SRC_ALPHA, dst: ONE_MINUS_SRC_ALPHA };
+		this.visualiseProgram.activate();
+		this.visualiseProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		this.visualiseProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
+		this.visualiseProgram.transparent = true;
+		this.visualiseProgram.blendFunction = { src: SRC_ALPHA, dst: ONE_MINUS_SRC_ALPHA };
 
 		// setup nodes
 		this.cubeDrawSet = new DrawSet(
 			new Mesh( geometry ),
-			this.program
+			this.visualiseProgram
 		);
 
 		this.particleProgram = new Program( particlesVertexShader, particlesFragmentShader );
@@ -145,10 +177,9 @@ export default class extends Base {
 		this.simulationProgram.setFloat( "particleSpeed", this.config.particleSpeed );
 		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
 		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
-		this.simulationProgram.setTexture( "mapVolume", volumeTexture );
-
-
 		this.simulationProgram.setFloat( "time", 0 );
+		this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.simulationProgramLocations = {
 			"oldPosition": 0,
@@ -158,9 +189,10 @@ export default class extends Base {
 			"initLifeTime": 4,
 			"random": 5,
 			"groupID": 6,
+			"particleID": 7
 		};
 
-		this.transformFeedback = new TransformFeedback( { bolt: this.bolt, count: this.instanceCount } );
+		this.transformFeedback = new TransformFeedback( { bolt: this.bolt, count: this.pointCount } );
 
 		this.assetsLoaded = true;
 
@@ -192,7 +224,7 @@ export default class extends Base {
 		const indices: number[] = [];
 
 
-		for ( let i = 0; i < this.instanceCount; i ++ ) {
+		for ( let i = 0; i < this.pointCount; i ++ ) {
 
 			indices.push( i );
 
@@ -207,26 +239,19 @@ export default class extends Base {
 				Math.random() * 2 - 1
 			);
 
-			const range = 0.01;
+			const range = 0.1;
 
-			const positionX = ( Math.random() * 2 - 1 ) * range;
-			const positionY = ( Math.random() * 2 - 1 ) * range;
-			const positionZ = ( Math.random() * 2 - 1 ) * range;
-
-			offsets.push( positionX, positionY, positionZ );
+			offsets.push( 0, 0, 0 );
 
 			const normal = Math.random() * 2 - 1;
 			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.1;
 
-			positions.push( positionX, positionY, positionZ );
-
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			velocities.push( 0, 0, 0 );
+			velocities.push( ( Math.random() * 2 - 1 ) * 0.1, ( Math.random() * 2 - 1 ) * 0.1, Math.random() * 0.01 );
 
 		}
-
 
 		// buffers
 		const offset1VBO = new VBO( new Float32Array( offsets ), DYNAMIC_DRAW );
@@ -238,10 +263,11 @@ export default class extends Base {
 		const life1VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 		const life2VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 
-		const init1VBO = new VBO( new Float32Array( offsets ), STATIC_DRAW );
+		const init1VBO = new VBO( this.pointCloud, STATIC_DRAW );
 		const initLife1VBO = new VBO( new Float32Array( lifeTimes ), STATIC_DRAW );
 		const randomsVBO = new VBO( new Float32Array( randoms ), STATIC_DRAW );
 		const groupsVBO = new VBO( new Float32Array( groupIds ), STATIC_DRAW );
+		const particleIDsVBO = new VBO( new Float32Array( indices ), STATIC_DRAW );
 
 
 		this.transformFeedback.bindVAOS(
@@ -294,6 +320,13 @@ export default class extends Base {
 					attributeLocation: this.simulationProgramLocations.groupID,
 					size: 1,
 					requiresSwap: false
+				},
+				{
+					vbo1: particleIDsVBO,
+					vbo2: particleIDsVBO,
+					attributeLocation: this.simulationProgramLocations.particleID,
+					size: 1,
+					requiresSwap: false
 				}
 			]
 		);
@@ -307,6 +340,7 @@ export default class extends Base {
 		} ).setDrawType( POINTS );
 
 		pointMesh.setAttribute( new Float32Array( scales ), 1, 7 );
+		pointMesh.setAttribute( new Float32Array( indices ), 1, 10 );
 		pointMesh.setVBO( offset1VBO, 3, 2 );
 
 		const particleDrawSet = new DrawSet( pointMesh, pp );
@@ -351,17 +385,14 @@ export default class extends Base {
 
 		this.orbit.update();
 
-		this.simulationProgram.activate();
-		this.simulationProgram.setFloat( "time", elapsed );
-		this.simulationProgram.setFloat( "delta", delta );
 
-		this.transformFeedback.compute();
 
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
 
 
 		this.particleDrawState
+			.uniformTexture( "mapVolume", this.volumeNormalTexture )
 			.uniformFloat( "colorMode", this.colorEase.value )
 			.uniformFloat( "time", elapsed )
 			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
@@ -372,16 +403,23 @@ export default class extends Base {
 				bgLight[ 3 ] * ( 1 - this.colorEase.value ) + bgDark[ 3 ] * ( this.colorEase.value ) )
 			.draw();
 
+		this.simulationProgram.activate();
+		this.simulationProgram.setFloat( "time", elapsed );
+		this.simulationProgram.setFloat( "delta", delta );
+
+		this.transformFeedback.compute();
+
 
 		// vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
 
-		this.bolt.draw( this.cubeDrawSet );
+
+		//this.bolt.draw( this.cubeDrawSet );
 
 		//this.post.end();
 
-		this.program.activate();
-		this.program.setVector3( "viewPosition", this.camera.position );
-		this.program.setFloat( "time", elapsed );
+		this.visualiseProgram.activate();
+		this.visualiseProgram.setVector3( "viewPosition", this.camera.position );
+		this.visualiseProgram.setFloat( "time", elapsed );
 
 		//this.post.end();
 

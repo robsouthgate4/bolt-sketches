@@ -63,8 +63,8 @@ float randomFloat(inout uint seed) {
 
 void main() {
 
-  float stepSize = 0.02;
-  float densityScale = 0.15;
+  float stepSize = 0.005;
+  float densityScale = 0.08;
 
   vec3 rayOrigin = Ro;
   vec3 rayDirection = normalize(Rd);
@@ -75,21 +75,36 @@ void main() {
   uint seed = uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(time) * uint(26699);
   float randNum = randomFloat(seed) * 2.0 - 1.0;
 
+
+  vec3 outColor = vec3( 0.0 );
+
   for(int i = 0; i < MAX_STEPS; i++) {
     rayOrigin += (rayDirection * stepSize);
 
-    float sampledDensity = sampleAs3DTexture(mapVolume, clamp(rayOrigin + vec3(0.5), 0.0, 1.0), 64., 8., 8.).r;
+    vec4 sdf = sampleAs3DTexture(mapVolume, clamp(rayOrigin + vec3(0.5), 0.0, 1.0), 128., 8., 16.);
+    float sampledDensity = sdf.a;
+    vec3 norm = sdf.rgb;
 
-    if(density > MAX_DIST) {
-      break;
+    // if(density > MAX_DIST) {
+    //   break;
+    // }
+
+    if( sampledDensity < 0.0 ) {
+
+      outColor = vec3( 1.0 );
+
+    } else {
+
+      outColor = vec3( 0.0 );
+
     }
 
-    density += (sampledDensity * densityScale);
+    //density += (sampledDensity * densityScale);
 
   }
 
-  transmision = exp(-density);
+  //transmision = exp(-density);
 
-  FragColor = vec4(vec3(transmision), density);
+  FragColor = vec4(outColor, 1.0);
 
 }

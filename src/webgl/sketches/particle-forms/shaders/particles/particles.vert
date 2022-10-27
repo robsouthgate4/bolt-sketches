@@ -79,6 +79,10 @@ void main() {
 
     vec3 pos = aOffset; //* particleScale;
 
+    //if(pos.x > 0.0) pos *= 0.0;
+    // if(pos.y > 0.0) pos *= 0.0;
+    // if(pos.z > 0.0) pos *= 0.0;
+
     float lifeNormalised = aLifeTime / aInitLifeTime;
 
     //pos = mat3( rotation3d( vec3( 1.0, 0.0, 0.0 ), PI * 0.5) ) * pos;
@@ -98,15 +102,15 @@ void main() {
 
     //ShadowCoord = lightSpaceMatrix * worldPosition;
 
-    gl_Position = projection * mvPosition;
+    gl_Position = projection * view * model * vec4( transformed, 1.0 );
 
-    float scale = aScale;
+    float scale = 1.0;
 
-    scale += 0.1 * Random.y;
+    scale *= 3.0;
 
-    gl_PointSize = scale * particleScale;
+    gl_PointSize = scale;
 
-    gl_PointSize *= ( scale / - mvPosition.z );
+    //gl_PointSize *= ( scale / - mvPosition.z );
 
     //gl_PointSize *= parabola( lifeNormalised, 1.0 );
 
