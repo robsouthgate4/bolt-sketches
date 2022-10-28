@@ -186,7 +186,7 @@ export default class EventListeners {
 
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// @ts-ignore
 	publish( topic: string, detail?: any ) {
 
 		if ( ! this._target ) return;
@@ -195,7 +195,7 @@ export default class EventListeners {
 
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// @ts-ignore
 	listen( topic: string, callback: ( event: any ) => void ) {
 
 		if ( ! this._target ) return;

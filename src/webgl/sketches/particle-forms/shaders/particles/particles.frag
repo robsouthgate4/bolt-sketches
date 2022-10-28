@@ -51,7 +51,7 @@ void main() {
 
     colorDark *= 0.3;
 
-    vec3 color = vec3( 0.0 );
+    vec3 color = vec3( 1.0 );
 
     FragColor = vec4( color, 1.0 );
 

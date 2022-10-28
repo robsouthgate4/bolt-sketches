@@ -1,4 +1,4 @@
-import { mat3, mat4, vec2, vec3, vec4 } from "gl-matrix";
+import { mat2, mat3, mat4, vec2, vec3, vec4 } from "gl-matrix";
 import Texture from "./Texture";
 import Bolt from "./Bolt";
 import { FRAGMENT_SHADER, LINK_STATUS, ONE, ONE_MINUS_SRC_ALPHA, VERTEX_SHADER } from "./Constants";
@@ -151,6 +151,19 @@ export default class Program {
 			this._gl.getUniformLocation( this._program, uniform ),
 			value
 
+		);
+
+		this._uniforms[ uniform ] = { value };
+
+
+	}
+
+	setMatrix2( uniform: string, value: mat2 ) {
+
+		this._gl.uniformMatrix2fv(
+			this._gl.getUniformLocation( this._program, uniform ),
+			false,
+			value
 		);
 
 		this._uniforms[ uniform ] = { value };

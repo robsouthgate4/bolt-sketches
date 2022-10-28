@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { Program, Transform, Mesh, Texture2D, CameraPersp, CLAMP_TO_EDGE, LINEAR, SRC_ALPHA, ONE_MINUS_SRC_ALPHA, FRONT, BACK, DrawSet, VBO, DYNAMIC_DRAW, STATIC_DRAW, POINTS, FLOAT, RGBA32f, NEAREST, RGBA16F, RGBA } from "@/webgl/libs/bolt";
+import Bolt, { Program, Transform, Mesh, Texture2D, CameraPersp, SRC_ALPHA, ONE_MINUS_SRC_ALPHA, DrawSet, VBO, DYNAMIC_DRAW, STATIC_DRAW, POINTS, FLOAT, CLAMP_TO_EDGE, NEAREST } from "@/webgl/libs/bolt";
 
 import raymarchVertexShader from "./shaders/raymarch/raymarch.vert";
 import raymarchFragmentShader from "./shaders/raymarch/raymarch.frag";
@@ -11,6 +11,9 @@ import simulationFragmentShader from "./shaders/simulation/simulation.frag";
 
 import particlesVertexShader from "./shaders/particles/particles.vert";
 import particlesFragmentShader from "./shaders/particles/particles.frag";
+
+import debugVertexShader from "./shaders/basic/basic.vert";
+import debugFragmentShader from "./shaders/basic/basic.frag";
 
 import { vec3, } from "gl-matrix";
 import Orbit from "@/webgl/modules/orbit";
@@ -24,8 +27,9 @@ import DrawState from "@/webgl/modules/draw-state";
 import EaseNumber from "@/webgl/helpers/EaseNumber";
 import { GL_RESIZE_TOPIC } from "@/webgl/modules/event-listeners/constants";
 import EventListeners from "@/webgl/modules/event-listeners";
-import parseHdr from "@/webgl/modules/hdr-parse";
-import PLYParser from "@/webgl/modules/ply-parse";
+
+import pako from "pako";
+import Plane from "@/webgl/modules/primitives/Plane";
 export default class extends Base {
 
 	canvas: HTMLCanvasElement;
@@ -53,7 +57,7 @@ export default class extends Base {
 	pointCount = 256 * 256;
 	transformFeedback: TransformFeedback;
 	particleDrawState: DrawState;
-	colorEase = new EaseNumber( config.colorMode === "light" ? 0 : 1, 0.02 );
+	colorEase = new EaseNumber( config.colorMode === "light" ? 1 : 0, 0.02 );
 	eventListeners = EventListeners.getInstance();
 	volumeNormalTexture: Texture2D;
 	volumeDistanceTexture: Texture2D;
@@ -84,7 +88,7 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 2, 0, 1 ),
+			position: vec3.fromValues( 0, 0, 2 ),
 			target: vec3.fromValues( 0, 0, 0 ),
 		} );
 
@@ -113,14 +117,26 @@ export default class extends Base {
 
 		const geometry = new Cube( { widthSegments: 1, heightSegments: 1, depthSegments: 1 } );
 
-		const pointsPLY = await fetch( "/static/models/ply/toy-no-col.ply" );
-		const pointsPLYText = await pointsPLY.text();
-		const parsedPLY = new PLYParser().parse( pointsPLYText );
-		this.pointCloud = new Float32Array( parsedPLY.points );
+		const pointsBuf = await fetch( "/static/models/ply/toy-no-col.buf" );
+		const pointsAB = await pointsBuf.arrayBuffer();
 
+		// uncompress gzip data
+		const pointsParsed = pako.inflate( pointsAB, { to: 'string' } ).split( "," ).map( ( v: string ) => {
+
+			if ( v.includes( "[" ) ) {
+
+				return parseFloat( v.replace( "[", "" ) );
+
+			}
+
+			return parseFloat( v );
+
+		} );
+
+		this.pointCloud = new Float32Array( pointsParsed );
 
 		this.volumeNormalTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/toy-normal.png",
+			imagePath: "/static/textures/volumes/sdf-normal.png",
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
 			minFilter: NEAREST,
@@ -131,7 +147,7 @@ export default class extends Base {
 		await this.volumeNormalTexture.load();
 
 		this.volumeDistanceTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/toy-distance.png",
+			imagePath: "/static/textures/volumes/dog.png",
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
 			minFilter: NEAREST,
@@ -144,7 +160,7 @@ export default class extends Base {
 		this.assetsLoaded = true;
 
 		this.visualiseProgram.activate();
-		this.visualiseProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		// this.visualiseProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
 		this.visualiseProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 		this.visualiseProgram.transparent = true;
 		this.visualiseProgram.blendFunction = { src: SRC_ALPHA, dst: ONE_MINUS_SRC_ALPHA };
@@ -178,7 +194,7 @@ export default class extends Base {
 		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
 		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
 		this.simulationProgram.setFloat( "time", 0 );
-		this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		// this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
 		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.simulationProgramLocations = {
@@ -241,15 +257,15 @@ export default class extends Base {
 
 			const range = 0.1;
 
-			offsets.push( 0, 0, 0 );
-
 			const normal = Math.random() * 2 - 1;
 			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.1;
 
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			velocities.push( ( Math.random() * 2 - 1 ) * 0.1, ( Math.random() * 2 - 1 ) * 0.1, Math.random() * 0.01 );
+			offsets.push( Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1 );
+
+			velocities.push( 0, 0, 0 );
 
 		}
 
@@ -263,7 +279,7 @@ export default class extends Base {
 		const life1VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 		const life2VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 
-		const init1VBO = new VBO( this.pointCloud, STATIC_DRAW );
+		const init1VBO = new VBO( new Float32Array( offsets ), STATIC_DRAW );
 		const initLife1VBO = new VBO( new Float32Array( lifeTimes ), STATIC_DRAW );
 		const randomsVBO = new VBO( new Float32Array( randoms ), STATIC_DRAW );
 		const groupsVBO = new VBO( new Float32Array( groupIds ), STATIC_DRAW );
@@ -347,6 +363,17 @@ export default class extends Base {
 
 		const bg = this.config[ this.config.colorMode ].backgroundColor;
 
+		const debugProgram = new Program( debugVertexShader, debugFragmentShader );
+
+		debugProgram.activate();
+		debugProgram.setTexture( 'map', this.volumeDistanceTexture );
+
+		const debugMesh = new Mesh( new Plane() );
+		const debugDrawSet = new DrawSet( debugMesh, debugProgram );
+		debugDrawSet.transform.scaleX = 2;
+
+		//debugDrawSet.setParent( particleDrawSet );
+
 		// prepare draw states
 
 		this.particleDrawState = new DrawState( this.bolt )
@@ -392,7 +419,7 @@ export default class extends Base {
 
 
 		this.particleDrawState
-			.uniformTexture( "mapVolume", this.volumeNormalTexture )
+			.uniformTexture( "mapDistanceVolume", this.volumeDistanceTexture )
 			.uniformFloat( "colorMode", this.colorEase.value )
 			.uniformFloat( "time", elapsed )
 			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
@@ -406,6 +433,7 @@ export default class extends Base {
 		this.simulationProgram.activate();
 		this.simulationProgram.setFloat( "time", elapsed );
 		this.simulationProgram.setFloat( "delta", delta );
+		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.transformFeedback.compute();
 

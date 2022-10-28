@@ -26,8 +26,8 @@ uniform float particleLifeRate;
 uniform float particleSpeed;
 uniform float curlStrength;
 // uniform sampler2D mapNormalVolume;
-// uniform sampler2D mapDistanceVolume;
-uniform sampler2D mapPointCloud;
+uniform sampler2D mapDistanceVolume;
+
 
 
 #define PI 3.1415
@@ -222,24 +222,25 @@ vec3 calcNormalSDF(vec3 p, float eps) {
 
 vec3 sampleWithOffset(sampler2D map, vec3 pos, vec3 offset) {
 
-  return sampleAs3DTexture(map, (pos + vec3( 0.5 )) + offset, 128., 8., 8.).rgb * 2.0 - 1.0;
+  return sampleAs3DTexture(map, pos, 256., 10., 10.).rgb * 2.0 - 1.0;
 
 }
 
-// vec3 calcNormalTexture( vec3 p, float eps, sampler2D map ) {
+vec3 calcNormalTexture( vec3 p, float eps, sampler2D map ) {
 
-//   return normalize(vec3(
-//     sampleWithOffset(p, vec3(eps, 0, 0)).r - sampleWithOffset(p, vec3(-eps, 0, 0)).r,
-//     sampleWithOffset(p, vec3(0, eps, 0)).r - sampleWithOffset(p, vec3(0, -eps, 0)).r,
-//     sampleWithOffset(p, vec3(0, 0, eps)).r - sampleWithOffset(p, vec3(0, 0, -eps)).r
-// 	));
+  return normalize(vec3(
+    sampleWithOffset(map, p, vec3(eps, 0, 0)).r - sampleWithOffset(map, p, vec3(-eps, 0, 0)).r,
+    sampleWithOffset(map, p, vec3(0, eps, 0)).r - sampleWithOffset(map, p, vec3(0, -eps, 0)).r,
+    sampleWithOffset(map, p, vec3(0, 0, eps)).r - sampleWithOffset(map, p, vec3(0, 0, -eps)).r
+	));
 
-// }
+}
 
 
 void main() {
 
-  vec3 pos = initPosition;
+  vec3 pos = oldPosition;
+  vec3 vel = oldVelocity;
 
   // vec3 boxMin = vec3( -0.49923, -0.407849, -0.448861 );
   // vec3 boxMax = vec3( 0.499752, 0.407821, 0.449532 );
@@ -254,59 +255,48 @@ void main() {
   // float closest = 10000.;
 
   // // set initial points to be far away to avoid initial glitches
-  // vec3 closestPoint = vec3( 1000.0 );
+  //vec3 closestPoint = vec3( 1000.0 );
 
   vec3 wind = vec3(0.0, 0.0, 0.001);
 
-  vec3 vel = oldVelocity;
-
-  vec3 c = curlNoise( pos * 5. + ( time * 1. ) ) * 0.002;
-
-  // //vel -= wind;
-  // vec3 n = calcNormalSDF( pos, 0.001 );
-  // // pos.y = min( 0.5, max( pos.y, -0.5 ));
-  // // pos.x = min( 0.5, max( pos.x, -0.5 ));
-  // // pos.z = min( 0.5, max( pos.z, -0.5 ));
-
-  // vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, pos + vec3( 0.5 ), 128., 8., 8. ) * 2.0 - 1.0;
-  // vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, pos + vec3( 0.5 ), 128., 8., 8. ) * 2.0 - 1.0;
-
-  // vec2 idUV = vec2( mod( particleID, 256. ), floor( particleID / 256. ) ) / 256.;
-  // vec3 particleInitialPosition = texture( mapPointCloud, idUV ).rgb;
-
-  // float dist = 0.001;
-  // vec3 norm = sdfNormal.rgb; //calcNormalTexture( pos, 0.001, mapNormalVolume ).rgb;
 
 
-  // vec3 force = vec3( 0.0 );
+  vec3 c = curlNoise( pos * 5. + ( time * 1. ) ) * 0.0001;
 
-  // float forceIn = 0.8;
-  // float forceOut = 0.8;
+  vel += c;
 
-  // if(dist < 0.0) {
+  //vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, pos + vec3( 0.5 ), 128., 8., 8. ) * 2.0 - 1.0;
+  vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, pos + vec3( 0.5 ), 128., 8., 16. ) * 2.0 - 1.0;
 
-  //   force -= norm * forceIn * dist; // push from inside
-
-  // } else {
-
-  //   force -= norm * forceOut * dist; // pull from outside
-
-  //}
-
-  //vel += force * (1./ 60.);
-
-  // vel += c;
-
-  // vel *= 0.96;
-
-  // pos += vel;
+  float dist = sdfDistance.a;
+  vec3 norm = sdfDistance.rgb;
 
 
-  // if(dist < 0.0) {
-  //   vel *= 0.1 * dist;
-  // }
+  vec3 force = vec3( 0.0 );
 
-  //pos = particleInitialPosition;
+  float forceIn = 3.;
+  float forceOut = 5.;
+
+  if(dist < 0.0) {
+
+    force -= norm * forceIn * dist; // pull from outside
+
+
+  } else {
+
+    force -= norm * forceOut * dist; // pull from outside
+
+  }
+
+  vel += c;
+
+  vel += force * (1./ 60.);
+
+  vel *= 0.95;
+
+
+  pos += vel;
+
 
   float life = oldLifeTime;
 
@@ -314,8 +304,8 @@ void main() {
 
   if(life < 0.0) {
 
-    // pos = initPosition;
-    // life = initLife;
+    pos = initPosition;
+    life = initLife;
 
   }
 

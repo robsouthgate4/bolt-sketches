@@ -104,13 +104,11 @@ void main() {
 
     gl_Position = projection * view * model * vec4( transformed, 1.0 );
 
-    float scale = 1.0;
-
-    scale *= 3.0;
+    float scale = 2.0;
 
     gl_PointSize = scale;
 
-    //gl_PointSize *= ( scale / - mvPosition.z );
+    gl_PointSize *= ( scale / - mvPosition.z );
 
     //gl_PointSize *= parabola( lifeNormalised, 1.0 );
 

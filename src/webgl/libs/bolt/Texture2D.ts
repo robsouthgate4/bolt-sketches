@@ -5,6 +5,9 @@ import Texture from "./Texture";
 
 export default class Texture2D extends Texture {
 
+	private _image: HTMLImageElement;
+
+
 	constructor(
 		{
 			imagePath = "",
@@ -169,6 +172,8 @@ export default class Texture2D extends Texture {
 
 				resolve( image );
 
+				this._image = image;
+
 			} );
 
 			image.addEventListener( "error", ( ev ) => {
@@ -180,6 +185,12 @@ export default class Texture2D extends Texture {
 			image.src = this._imagePath;
 
 		} );
+
+	}
+
+	public get image(): HTMLImageElement {
+
+		return this._image;
 
 	}
 

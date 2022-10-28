@@ -2,13 +2,9 @@ import pymeshlab
 import os
 import numpy as np
 import json
-from json import JSONEncoder
+import gzip
 
-class NumpyArrayEncoder(JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, np.ndarray):
-			return obj.tolist()
-		return JSONEncoder.default(self, obj)
+from json import JSONEncoder
 
 def example_save_mesh():
 
@@ -21,8 +17,6 @@ def example_save_mesh():
 
 	m = ms.current_mesh()
 	arr = m.vertex_matrix()
-
-	#print(arr)
 
 	f = arr
 
@@ -44,12 +38,15 @@ def example_save_mesh():
 
 	print(ms.number_meshes())
 
+	verts = [item for sublist in verts for item in sublist]
+	with gzip.open('toy-no-col.buf', 'w') as fout:
+		fout.write(json.dumps(verts).encode("utf-8"))
 
 	# with open("numpyData.json", "w") as write_file:
 	# 	json.dump(verts, write_file, cls=NumpyArrayEncoder)
 	# 	print("Done writing serialized NumPy array into file")
 
-	# print('Array exported to file')
+	print('Array exported to file')
 
 	ms.save_current_mesh(out_path + '/toy-no-col-bin.ply',
 		binary=True,

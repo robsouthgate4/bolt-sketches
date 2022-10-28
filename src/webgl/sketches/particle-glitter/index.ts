@@ -82,7 +82,7 @@ export default class extends Base {
 	lineDrawSet: DrawSet;
 	pointDrawSet: DrawSet;
 	catmullRom: CatmullRom;
-	points: any[];
+	points: vec3[];
 	post: Post;
 
 	constructor() {
