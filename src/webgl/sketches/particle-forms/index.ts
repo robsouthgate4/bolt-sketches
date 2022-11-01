@@ -136,7 +136,7 @@ export default class extends Base {
 		this.pointCloud = new Float32Array( pointsParsed );
 
 		this.volumeNormalTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/sdf-normal.png",
+			imagePath: "/static/textures/volumes/sdf-normal-a.png",
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
 			minFilter: NEAREST,
@@ -147,7 +147,7 @@ export default class extends Base {
 		await this.volumeNormalTexture.load();
 
 		this.volumeDistanceTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/dog.png",
+			imagePath: "/static/textures/volumes/sdf-distance-a.png",
 			wrapS: CLAMP_TO_EDGE,
 			wrapT: CLAMP_TO_EDGE,
 			minFilter: NEAREST,
@@ -158,18 +158,6 @@ export default class extends Base {
 		await this.volumeDistanceTexture.load();
 
 		this.assetsLoaded = true;
-
-		this.visualiseProgram.activate();
-		// this.visualiseProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
-		this.visualiseProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
-		this.visualiseProgram.transparent = true;
-		this.visualiseProgram.blendFunction = { src: SRC_ALPHA, dst: ONE_MINUS_SRC_ALPHA };
-
-		// setup nodes
-		this.cubeDrawSet = new DrawSet(
-			new Mesh( geometry ),
-			this.visualiseProgram
-		);
 
 		this.particleProgram = new Program( particlesVertexShader, particlesFragmentShader );
 
@@ -194,7 +182,7 @@ export default class extends Base {
 		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
 		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
 		this.simulationProgram.setFloat( "time", 0 );
-		// this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
 		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.simulationProgramLocations = {
@@ -263,7 +251,7 @@ export default class extends Base {
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			offsets.push( Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1 );
+			offsets.push( 0.0, ( Math.random() * 0.1 ) - 0.3, ( Math.random() * 0.1 ) );
 
 			velocities.push( 0, 0, 0 );
 
@@ -279,7 +267,7 @@ export default class extends Base {
 		const life1VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 		const life2VBO = new VBO( new Float32Array( lifeTimes ), DYNAMIC_DRAW );
 
-		const init1VBO = new VBO( new Float32Array( offsets ), STATIC_DRAW );
+		const init1VBO = new VBO( this.pointCloud, STATIC_DRAW );
 		const initLife1VBO = new VBO( new Float32Array( lifeTimes ), STATIC_DRAW );
 		const randomsVBO = new VBO( new Float32Array( randoms ), STATIC_DRAW );
 		const groupsVBO = new VBO( new Float32Array( groupIds ), STATIC_DRAW );
@@ -366,13 +354,15 @@ export default class extends Base {
 		const debugProgram = new Program( debugVertexShader, debugFragmentShader );
 
 		debugProgram.activate();
-		debugProgram.setTexture( 'map', this.volumeDistanceTexture );
+		debugProgram.setTexture( 'mapNormal', this.volumeNormalTexture );
+		debugProgram.setTexture( 'mapDistance', this.volumeDistanceTexture );
 
 		const debugMesh = new Mesh( new Plane() );
 		const debugDrawSet = new DrawSet( debugMesh, debugProgram );
-		debugDrawSet.transform.scaleX = 2;
+		//debugDrawSet.transform.scaleX = 2;
+		debugDrawSet.transform.positionY = 0;
 
-		//debugDrawSet.setParent( particleDrawSet );
+		debugDrawSet.setParent( particleDrawSet );
 
 		// prepare draw states
 
@@ -412,14 +402,11 @@ export default class extends Base {
 
 		this.orbit.update();
 
-
-
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
 
 
 		this.particleDrawState
-			.uniformTexture( "mapDistanceVolume", this.volumeDistanceTexture )
 			.uniformFloat( "colorMode", this.colorEase.value )
 			.uniformFloat( "time", elapsed )
 			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
@@ -430,26 +417,10 @@ export default class extends Base {
 				bgLight[ 3 ] * ( 1 - this.colorEase.value ) + bgDark[ 3 ] * ( this.colorEase.value ) )
 			.draw();
 
-		this.simulationProgram.activate();
+
+		this.transformFeedback.compute( this.simulationProgram );
 		this.simulationProgram.setFloat( "time", elapsed );
 		this.simulationProgram.setFloat( "delta", delta );
-		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
-
-		this.transformFeedback.compute();
-
-
-		// vec3.copy( this.repellorPositinPrevious, this.repellorPosition );
-
-
-		//this.bolt.draw( this.cubeDrawSet );
-
-		//this.post.end();
-
-		this.visualiseProgram.activate();
-		this.visualiseProgram.setVector3( "viewPosition", this.camera.position );
-		this.visualiseProgram.setFloat( "time", elapsed );
-
-		//this.post.end();
 
 	}
 

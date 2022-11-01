@@ -37,7 +37,7 @@ export default abstract class Texture {
 			internalFormat = RGBA,
 			type = UNSIGNED_BYTE,
 			generateMipmaps = true,
-			flipY = false,
+			flipY = true,
 			target = TEXTURE_2D,
 		} = {}
 	) {

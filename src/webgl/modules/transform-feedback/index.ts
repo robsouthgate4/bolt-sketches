@@ -1,4 +1,4 @@
-import Bolt, { FLOAT, POINTS, VAO, VBO, AttribPointer } from "@/webgl/libs/bolt";
+import Bolt, { FLOAT, POINTS, VAO, VBO, AttribPointer, Program } from "@/webgl/libs/bolt";
 
 
 export interface VBOSwapDefinition {
@@ -121,7 +121,23 @@ export default class TransformFeedback {
 	}
 
 
-	compute() {
+	compute( program?: Program ) {
+
+		program.activate();
+
+		if ( ! program ) return;
+
+		if ( program.textures && program.textures.length > 0 ) {
+
+			for ( let i = 0; i < program.textures.length; i ++ ) {
+
+				const textureObject = program.textures[ i ];
+
+				textureObject.texture.textureUnit( program, textureObject.uniformName, i );
+
+			}
+
+		}
 
 		this._gl.enable( this._gl.RASTERIZER_DISCARD );
 

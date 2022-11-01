@@ -25,8 +25,8 @@ uniform float repellorStrength;
 uniform float particleLifeRate;
 uniform float particleSpeed;
 uniform float curlStrength;
-// uniform sampler2D mapNormalVolume;
 uniform sampler2D mapDistanceVolume;
+uniform sampler2D mapNormalVolume;
 
 
 
@@ -176,6 +176,7 @@ vec4 sampleAs3DTexture(sampler2D tex, vec3 texCoord, float size, float numRows, 
   return slice0Color;
 }
 
+
 mat4 rotation3d(vec3 axis, float angle) {
 
   axis = normalize(axis);
@@ -220,19 +221,21 @@ vec3 calcNormalSDF(vec3 p, float eps) {
 
 }
 
-vec3 sampleWithOffset(sampler2D map, vec3 pos, vec3 offset) {
+float sampleWithOffset(sampler2D map, vec3 pos) {
 
-  return sampleAs3DTexture(map, pos, 256., 10., 10.).rgb * 2.0 - 1.0;
+  return sampleAs3DTexture(map, pos, 128., 11., 11.).r;
 
 }
 
 vec3 calcNormalTexture( vec3 p, float eps, sampler2D map ) {
 
-  return normalize(vec3(
-    sampleWithOffset(map, p, vec3(eps, 0, 0)).r - sampleWithOffset(map, p, vec3(-eps, 0, 0)).r,
-    sampleWithOffset(map, p, vec3(0, eps, 0)).r - sampleWithOffset(map, p, vec3(0, -eps, 0)).r,
-    sampleWithOffset(map, p, vec3(0, 0, eps)).r - sampleWithOffset(map, p, vec3(0, 0, -eps)).r
-	));
+  vec3 n = vec3(
+    sampleWithOffset(map, p + vec3(eps, 0., 0.)) - sampleWithOffset(map, p + vec3(-eps, 0., 0.)) * 2.0 - 1.0,
+    sampleWithOffset(map, p + vec3(0., eps, 0.)) - sampleWithOffset(map, p + vec3(0., -eps, 0.)) * 2.0 - 1.0,
+    sampleWithOffset(map, p + vec3(0., 0., eps)) - sampleWithOffset(map, p + vec3(0., 0., -eps)) * 2.0 - 1.0
+	);
+
+  return normalize(n);
 
 }
 
@@ -242,13 +245,7 @@ void main() {
   vec3 pos = oldPosition;
   vec3 vel = oldVelocity;
 
-  // vec3 boxMin = vec3( -0.49923, -0.407849, -0.448861 );
-  // vec3 boxMax = vec3( 0.499752, 0.407821, 0.449532 );
 
-  // vec3 expand = boxMax - boxMin;
-
-  // pos *= expand;
-  // pos += vec3( boxMin );
 
   //pos -= 0.5;
 
@@ -259,44 +256,54 @@ void main() {
 
   vec3 wind = vec3(0.0, 0.0, 0.001);
 
+  vec3 c = curlNoise( pos * 10. + ( time * 1. ) ) * 0.0001;
 
+  vec3 boxMin = vec3( -0.49923, -0.407849, -0.448861 );
+  vec3 boxMax = vec3( 0.499752, 0.407821, 0.449532 );
 
-  vec3 c = curlNoise( pos * 5. + ( time * 1. ) ) * 0.0001;
+  vec3 expand = boxMax - boxMin;
 
-  vel += c;
+  //pos *= expand;
+  //pos += vec3( boxMin );
+  float sdfScale = 1.0;
 
-  //vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, pos + vec3( 0.5 ), 128., 8., 8. ) * 2.0 - 1.0;
-  vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, pos + vec3( 0.5 ), 128., 8., 16. ) * 2.0 - 1.0;
+  vec3 p = pos / sdfScale;
 
-  float dist = sdfDistance.a;
-  vec3 norm = sdfDistance.rgb;
+  vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, p + vec3( 0.5 ), 128., 11., 11. );
+  vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, p + vec3( 0.5 ), 128., 11., 11. );
+
+  float dist = sdfDistance.r * 2.0 - 1.0;
+
+  vec3 norm = sdfNormal.rgb * 2.0 - 1.0;
 
 
   vec3 force = vec3( 0.0 );
 
-  float forceIn = 3.;
-  float forceOut = 5.;
+  float forceIn = 0.1;
+  float forceOut = 0.5;
 
-  if(dist < 0.0) {
+  //vel += c * 3.0;
 
-    force -= norm * forceIn * dist; // pull from outside
 
+  if(dist < -0.75) {
+
+    //force -= norm * forceIn * dist; // pull from outside
+
+    vel += c * 3.0;
 
   } else {
 
-    force -= norm * forceOut * dist; // pull from outside
+    //force -= norm * forceOut * dist; // pull from outside
+
+    vel *= -1.0;
 
   }
-
-  vel += c;
 
   vel += force * (1./ 60.);
 
   vel *= 0.95;
 
-
   pos += vel;
-
 
   float life = oldLifeTime;
 
@@ -304,10 +311,12 @@ void main() {
 
   if(life < 0.0) {
 
-    pos = initPosition;
+    //pos = initPosition;
     life = initLife;
 
   }
+
+  //pos = initPosition;
 
   newPosition = pos;
   newVelocity = vel;

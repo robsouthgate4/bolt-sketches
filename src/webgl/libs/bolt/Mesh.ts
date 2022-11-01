@@ -345,7 +345,6 @@ export default class Mesh {
 				const textureObject = program.textures[ i ];
 
 				textureObject.texture.textureUnit( program, textureObject.uniformName, i );
-				textureObject.texture.bind();
 
 			}
 
