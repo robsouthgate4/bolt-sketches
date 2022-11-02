@@ -1,6 +1,7 @@
-import { vec2, vec3, vec4 } from "gl-matrix";
 
-import { isTouchDevice } from "@/webgl/globals/constants";
+
+import { vec2, vec3, vec4 } from "gl-matrix";
+import { isTouchDevice } from "./constants";
 import {
 	GL_WHEEL_TOPIC,
 	GL_TOUCH_END_TOPIC,
@@ -12,26 +13,26 @@ import {
 } from "./constants";
 
 export interface ITouchEvent {
-	normalized: {
-		x: number;
-		y: number;
-	};
-	raw: {
-		x: number;
-		y: number;
-	};
-	rawNormalized: {
-		x: number;
-		y: number;
-	};
+  normalized: {
+    x: number;
+    y: number;
+  };
+  raw: {
+    x: number;
+    y: number;
+  };
+  rawNormalized: {
+    x: number;
+    y: number;
+  };
 }
 
 export interface IUpdateEvent {
-	elapsed: number;
-	delta: number;
+  elapsed: number;
+  delta: number;
 }
 export interface IValue {
-	value: number | string | boolean | vec2 | vec3 | vec4;
+  value: number | string | boolean | vec2 | vec3 | vec4;
 }
 
 export type GenericEventData = CustomEvent<IValue>;
@@ -40,219 +41,263 @@ export type UpdateEventData = CustomEvent<IUpdateEvent>;
 
 export default class EventListeners {
 
-	static instance: EventListeners;
+  static instance: EventListeners;
+
+  private _width: number;
+  private _height: number;
+  private _mouse: ITouchEvent | null;
+  private _touch?: ITouchEvent | null;
+  private _target = new EventTarget();
+  private _boundElement?: HTMLElement;
+
+  constructor() {
+
+  	this._mouse = null;
+  	this._touch = null;
+  	this._width = window.innerWidth;
+  	this._height = window.innerHeight;
+  	this._boundElement = undefined;
+
+  }
+
+  setBoundElement( el: HTMLElement ) {
+
+  	this._boundElement = el;
+  	this._createListeners();
+
+  }
+
+  static getInstance() {
+
+  	if ( ! EventListeners.instance ) EventListeners.instance = new this();
+  	return EventListeners.instance;
+
+  }
+
+  private _createListeners() {
+
+  	if ( ! this._boundElement ) return;
+  	window.addEventListener( "resize", this.onResize.bind( this ) );
+  	if ( isTouchDevice() ) {
 
-	private _width: number;
-	private _height: number;
-	private _mouse: ITouchEvent | null;
-	private _touch?: ITouchEvent | null;
-	private _target = new EventTarget();
+  		this._boundElement.addEventListener(
+  			"touchstart",
+  			this.onTouch.bind( this )
+  		);
+  		this._boundElement.addEventListener(
+  			"touchend",
+  			this.onTouchEnd.bind( this )
+  		);
+  		this._boundElement.addEventListener(
+  			"touchmove",
+  			this.onTouchMove.bind( this )
+  		);
 
-	constructor() {
+  	} else {
 
-		this._mouse = null;
-		this._touch = null;
-		this._width = window.innerWidth;
-		this._height = window.innerHeight;
-		this._createListeners();
+  		this._boundElement.addEventListener( "mousedown", this.onMouse.bind( this ) );
+  		this._boundElement.addEventListener(
+  			"mouseup",
+  			this.onMouseEnd.bind( this )
+  		);
+  		this._boundElement.addEventListener(
+  			"mousemove",
+  			this.onMouseMove.bind( this )
+  		);
+  		this._boundElement.addEventListener( "wheel", this.onWheel.bind( this ) );
+  		this._boundElement.addEventListener( "keydown", this.onKeyDown.bind( this ) );
 
-	}
+  	}
 
-	static getInstance() {
+  }
 
-		if ( ! EventListeners.instance ) EventListeners.instance = new this();
-		return EventListeners.instance;
+  onResize() {
 
-	}
+  	this._width = window.innerWidth;
+  	this._height = window.innerHeight;
+  	this.publish( GL_RESIZE_TOPIC, { width: this._width, height: this._height } );
 
-	_createListeners() {
+  }
 
-		window.addEventListener( "resize", this.onResize.bind( this ) );
-		if ( isTouchDevice() ) {
+  removeListeners() {
 
-			window.addEventListener( "touchstart", this.onTouch.bind( this ) );
-			window.addEventListener( "touchend", this.onTouchEnd.bind( this ) );
-			window.addEventListener( "touchmove", this.onTouchMove.bind( this ) );
+  	if ( ! this._boundElement ) return;
+  	this._boundElement.removeEventListener(
+  		"touchstart",
+  		this.onTouch.bind( this )
+  	);
+  	this._boundElement.removeEventListener(
+  		"touchend",
+  		this.onTouchEnd.bind( this )
+  	);
+  	this._boundElement.removeEventListener(
+  		"touchmove",
+  		this.onTouchMove.bind( this )
+  	);
+  	this._boundElement.removeEventListener(
+  		"mousedown",
+  		this.onMouse.bind( this )
+  	);
+  	this._boundElement.removeEventListener(
+  		"mouseup",
+  		this.onMouseEnd.bind( this )
+  	);
+  	this._boundElement.removeEventListener(
+  		"mousemove",
+  		this.onMouseMove.bind( this )
+  	);
+  	this._boundElement.removeEventListener( "wheel", this.onWheel.bind( this ) );
+  	this._boundElement.removeEventListener(
+  		"keydown",
+  		this.onKeyDown.bind( this )
+  	);
+  	this._boundElement.removeEventListener( "keyup", this.onKeyUp.bind( this ) );
 
-		} else {
+  }
 
-			window.addEventListener( "mousedown", this.onMouse.bind( this ) );
-			window.addEventListener( "mouseup", this.onMouseEnd.bind( this ) );
-			window.addEventListener( "mousemove", this.onMouseMove.bind( this ) );
-			window.addEventListener( "wheel", this.onWheel.bind( this ) );
-			window.addEventListener( "keydown", this.onKeyDown.bind( this ) );
-			window.addEventListener( "keyup", this.onKeyUp.bind( this ) );
+  onMouse( ev: MouseEvent ) {
 
-		}
+  	this._mouse = this.getMouse( ev );
+  	this.publish( GL_TOUCH_START_TOPIC, this._mouse );
 
-	}
+  }
 
-	onResize() {
+  onKeyDown( ev: KeyboardEvent ) {
 
-		this._width = window.innerWidth;
-		this._height = window.innerHeight;
-		this.publish( GL_RESIZE_TOPIC, { width: this._width, height: this._height } );
+  	this.publish( GL_KEYDOWN_TOPIC, ev );
 
-	}
+  }
 
-	removeListeners() {
+  onKeyUp( ev: KeyboardEvent ) {
 
-		window.removeEventListener( "touchstart", this.onTouch.bind( this ) );
-		window.removeEventListener( "touchend", this.onTouchEnd.bind( this ) );
-		window.removeEventListener( "touchmove", this.onTouchMove.bind( this ) );
-		window.removeEventListener( "mousedown", this.onMouse.bind( this ) );
-		window.removeEventListener( "mouseup", this.onMouseEnd.bind( this ) );
-		window.removeEventListener( "mousemove", this.onMouseMove.bind( this ) );
-		window.removeEventListener( "wheel", this.onWheel.bind( this ) );
-		window.removeEventListener( "keydown", this.onKeyDown.bind( this ) );
-		window.removeEventListener( "keyup", this.onKeyUp.bind( this ) );
+  	this.publish( GL_KEYUP_TOPIC, ev );
 
-	}
+  }
 
-	onMouse( ev: MouseEvent ) {
+  onMouseEnd( ev: MouseEvent ) {
 
-		this._mouse = this.getMouse( ev );
-		this.publish( GL_TOUCH_START_TOPIC, this._mouse );
+  	this._mouse = this.getMouse( ev );
+  	this.publish( GL_TOUCH_END_TOPIC, this._mouse );
 
-	}
+  }
 
-	onKeyDown( ev: KeyboardEvent ) {
+  onTouch( ev: TouchEvent ) {
 
-		this.publish( GL_KEYDOWN_TOPIC, ev );
+  	this._touch = this.getTouch( ev );
+  	this.publish( GL_TOUCH_START_TOPIC, this._touch );
 
-	}
+  }
 
-	onKeyUp( ev: KeyboardEvent ) {
+  onTouchEnd( ev: TouchEvent ) {
 
-		this.publish( GL_KEYUP_TOPIC, ev );
+  	this._touch = this.getTouch( ev );
+  	this.publish( GL_TOUCH_END_TOPIC, this._touch );
 
-	}
+  }
 
-	onMouseEnd( ev: MouseEvent ) {
+  onWheel( ev: WheelEvent ) {
 
-		this._mouse = this.getMouse( ev );
-		this.publish( GL_TOUCH_END_TOPIC, this._mouse );
+  	this.publish( GL_WHEEL_TOPIC, ev );
 
-	}
+  }
 
-	onTouch( ev: TouchEvent ) {
+  onMouseMove( ev: MouseEvent ) {
 
-		this._touch = this.getTouch( ev );
-		this.publish( GL_TOUCH_START_TOPIC, this._touch );
+  	ev.preventDefault();
+  	ev.stopPropagation();
 
-	}
+  	this._mouse = this.getMouse( ev );
+  	this.publish( GL_TOUCH_MOVE_TOPIC, this._mouse );
 
-	onTouchEnd( ev: TouchEvent ) {
+  }
 
-		this._touch = this.getTouch( ev );
-		this.publish( GL_TOUCH_END_TOPIC, this._touch );
+  onTouchMove( ev: TouchEvent ) {
 
-	}
+  	if ( ev.touches ) {
 
-	onWheel( ev: WheelEvent ) {
+  		if ( ev.touches.length > 1 ) {
 
-		this.publish( GL_WHEEL_TOPIC, ev );
+  			return;
 
-	}
+  		}
 
-	onMouseMove( ev: MouseEvent ) {
+  	}
 
-		ev.preventDefault();
-		ev.stopPropagation();
+  	ev.stopPropagation();
 
-		this._mouse = this.getMouse( ev );
-		this.publish( GL_TOUCH_MOVE_TOPIC, this._mouse );
+  	this._touch = this.getTouch( ev );
+  	if ( ! this._touch ) return;
+  	this.publish( GL_TOUCH_MOVE_TOPIC, this._touch );
 
-	}
+  }
 
-	onTouchMove( ev: TouchEvent ) {
 
-		if ( ev.touches ) {
+  publish( topic: string, detail?: any ) {
 
-			if ( ev.touches.length > 1 ) {
+  	if ( ! this._target ) return;
+  	this._target.dispatchEvent( new CustomEvent( topic, { detail } ) );
+  	return this._target;
 
-				return;
+  }
 
-			}
 
-		}
+  listen( topic: string, callback: ( event: any ) => void ) {
 
-		ev.preventDefault();
-		ev.stopPropagation();
+  	if ( ! this._target ) return;
+  	this._target.addEventListener( topic, callback as EventListener );
+  	return this._target;
 
-		this._touch = this.getTouch( ev );
-		if ( ! this._touch ) return;
-		this.publish( GL_TOUCH_MOVE_TOPIC, this._touch );
+  }
 
-	}
+  getTouch( ev: TouchEvent ) {
 
-	// @ts-ignore
-	publish( topic: string, detail?: any ) {
+  	if ( ! ev.changedTouches.length ) return;
+  	const event = ev.changedTouches[ 0 ];
+  	return {
+  		normalized: {
+  			x: ( event.clientX / this._width ) * 2 - 1,
+  			y: - ( event.clientY / this._height ) * 2 + 1,
+  		},
+  		raw: {
+  			x: event.clientX,
+  			y: event.clientY,
+  		},
+  		rawNormalized: {
+  			x: ( event.clientX - this._width * 0.5 ) * 2,
+  			y: ( event.clientY - this._height * 0.5 ) * 2,
+  		},
+  	};
 
-		if ( ! this._target ) return;
-		this._target.dispatchEvent( new CustomEvent( topic, { detail } ) );
-		return this._target;
+  }
 
-	}
+  getMouse( ev: MouseEvent ) {
 
-	// @ts-ignore
-	listen( topic: string, callback: ( event: any ) => void ) {
+  	return {
+  		normalized: {
+  			x: ( ev.clientX / this._width ) * 2 - 1,
+  			y: - ( ev.clientY / this._height ) * 2 + 1,
+  		},
+  		raw: {
+  			x: ev.clientX,
+  			y: ev.clientY,
+  		},
+  		rawNormalized: {
+  			x: ( ev.clientX - this._width * 0.5 ) * 2,
+  			y: ( ev.clientY - this._height * 0.5 ) * 2,
+  		},
+  	};
 
-		if ( ! this._target ) return;
-		this._target.addEventListener( topic, callback as EventListener );
-		return this._target;
+  }
 
-	}
+  public get target() {
 
-	getTouch( ev: TouchEvent ) {
+  	return this._target;
 
-		if ( ! ev.changedTouches.length ) return;
-		const event = ev.changedTouches[ 0 ];
-		return {
-			normalized: {
-				x: ( event.clientX / this._width ) * 2 - 1,
-				y: - ( event.clientY / this._height ) * 2 + 1,
-			},
-			raw: {
-				x: event.clientX,
-				y: event.clientY,
-			},
-			rawNormalized: {
-				x: ( event.clientX - this._width * 0.5 ) * 2,
-				y: ( event.clientY - this._height * 0.5 ) * 2,
-			},
-		};
+  }
+  public set target( value ) {
 
-	}
+  	this._target = value;
 
-	getMouse( ev: MouseEvent ) {
-
-		return {
-			normalized: {
-				x: ( ev.clientX / this._width ) * 2 - 1,
-				y: - ( ev.clientY / this._height ) * 2 + 1,
-			},
-			raw: {
-				x: ev.clientX,
-				y: ev.clientY,
-			},
-			rawNormalized: {
-				x: ( ev.clientX - this._width * 0.5 ) * 2,
-				y: ( ev.clientY - this._height * 0.5 ) * 2,
-			},
-		};
-
-	}
-
-	public get target() {
-
-		return this._target;
-
-	}
-	public set target( value ) {
-
-		this._target = value;
-
-	}
+  }
 
 }

@@ -1,5 +1,5 @@
 
-import Example from "@/webgl/sketches/particle-forms";
+import Example from "@/webgl/sketches/snow-globe";
 
 export default class Main {
 

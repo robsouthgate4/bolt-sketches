@@ -22,7 +22,7 @@ export default class Texture2D extends Texture {
 			internalFormat = RGBA,
 			type = UNSIGNED_BYTE,
 			generateMipmaps = true,
-			flipY = false,
+			flipY = true,
 			target = TEXTURE_2D,
 		} = {}
 	) {
@@ -95,6 +95,9 @@ export default class Texture2D extends Texture {
 
 		this._gl.texImage2D( this._gl.TEXTURE_2D, 0, this._internalFormat, width, height, 0,
 			this._format, this._type, data );
+
+		this._width = width;
+		this._height = height;
 
 		this.unbind();
 

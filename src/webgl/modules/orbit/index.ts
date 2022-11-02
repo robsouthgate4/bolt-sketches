@@ -131,7 +131,6 @@ export default class Orbit {
 
 		}
 
-		console.log( this._shiftKeyDown );
 
 	}
 

@@ -270,7 +270,7 @@ void main() {
   vec3 p = pos / sdfScale;
 
   vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, p + vec3( 0.5 ), 128., 11., 11. );
-  vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, p + vec3( 0.5 ), 128., 11., 11. );
+  vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, p + vec3( 0.5 ), 128., 8., 16. );
 
   float dist = sdfDistance.r * 2.0 - 1.0;
 
@@ -279,13 +279,13 @@ void main() {
 
   vec3 force = vec3( 0.0 );
 
-  float forceIn = 0.1;
-  float forceOut = 0.5;
+  float forceIn = 1.0;
+  float forceOut = 3.0;
 
   //vel += c * 3.0;
 
 
-  if(dist < -0.75) {
+  if(dist < 0.0) {
 
     //force -= norm * forceIn * dist; // pull from outside
 

@@ -17,7 +17,7 @@ void main() {
 
 	//if(n.a < 0.0) discard;
 
-	vec3 o = mix( vec3( 1.0, 0.0, 0.0 ), vec3( 1.0 ), d.a );
+	vec3 o = mix( vec3( 1.0, 0.0, 0.0 ), vec3( 1.0 ), d.r );
 
 	FragColor = vec4( step( 0.0, o ), 1.0 );
 
