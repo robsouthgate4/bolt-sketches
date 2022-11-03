@@ -4,6 +4,7 @@ import vertexShader from "./shaders/basic/basic.vert";
 import fragmentShader from "./shaders/basic/basic.frag";
 import EventListeners from "@/webgl/modules/event-listeners";
 import { GL_UPDATE_TOPIC } from "@/webgl/modules/event-listeners/constants";
+import { vec2 } from "gl-matrix";
 
 export default class GlobeProgram extends Program {
 
@@ -27,6 +28,7 @@ export default class GlobeProgram extends Program {
 	render() {
 
 		this.activate();
+		this.setVector2( "resolution", vec2.fromValues( this.bolt.viewport.width, this.bolt.viewport.height ) );
 		this.setVector3( "cameraPosition", this.bolt.camera.transform.position );
 
 	}

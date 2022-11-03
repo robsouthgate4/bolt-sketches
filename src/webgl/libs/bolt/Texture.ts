@@ -108,6 +108,8 @@ export default abstract class Texture {
 
 		}
 
+		this._gl.pixelStorei( this._gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true );
+
 		this._gl.texParameteri(
 			this._target,
 			TEXTURE_WRAP_S,

@@ -1,7 +1,4 @@
-import Bolt, { DrawSet, Mesh, ONE, ONE_MINUS_SRC_ALPHA, Program, SRC_ALPHA, Texture2D, ZERO } from "@/webgl/libs/bolt";
-
-import vertexShader from "./shaders/basic/basic.vert";
-import fragmentShader from "./shaders/basic/basic.frag";
+import Bolt, { DrawSet, Mesh, ONE, Program, Texture2D } from "@/webgl/libs/bolt";
 
 import gBufferVertexShader from "./shaders/gbuffer/gbuffer.vert";
 import gBufferFragmentShader from "./shaders/gbuffer/gbuffer.frag";
@@ -29,7 +26,7 @@ export default class Monster extends DrawSet {
 
 		defaultP.activate();
 		defaultP.transparent = true;
-		defaultP.blendFunction = { src: ONE, dst: ZERO };
+		defaultP.blendFunction = { src: ONE, dst: ONE };
 		defaultP.setTexture( "map", map );
 		defaultP.setTexture( "mapDepth", mapDepth );
 
@@ -40,7 +37,7 @@ export default class Monster extends DrawSet {
 		const s = 1.5;
 
 		this.transform.scale = vec3.fromValues( s, s, s );
-		this.transform.position = vec3.fromValues( 0, 0.96, 0 );
+		this.transform.position = vec3.fromValues( 0, 0.96, 0.0 );
 
 		this.settings = {
 			depth: {

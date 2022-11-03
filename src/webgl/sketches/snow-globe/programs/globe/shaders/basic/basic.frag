@@ -4,6 +4,8 @@ precision highp float;
 
 uniform sampler2D mapEnv;
 uniform sampler2D mapInner;
+uniform vec2 resolution;
+
 
 // layout(location = 0) out vec4 defaultColor;
 // layout(location = 1) out vec4 scene;
@@ -43,31 +45,43 @@ mat3 rotationMatrix(vec3 axis, float angle) {
 
 void main() {
 
-	// float exposure = 0.1;
 
-	// vec3 v = ViewVector;
+	vec2 screenUV = gl_FragCoord.xy / resolution;
 
-	// //v = normalize(v);
+	float exposure = 0.2;
 
-	// // create fresnel
-	// float fresnel = pow( clamp( 1. - dot( normalize( Normal ), -normalize( v ) ), 0., 1.), 1.);
+	vec3 v = ViewVector;
 
-	// vec3 reflectVec = normalize(reflect(v, Normal));
+	//v = normalize(v);
 
-	// vec2 uv = vec2(atan(reflectVec.z, reflectVec.x), asin(reflectVec.y)) / vec2(2.0 * PI, PI) + 0.5;
+	// create fresnel
+	float fresnel = pow( clamp( 1. - dot( normalize( Normal ), -normalize( v ) ), 0., 1.), 0.75);
 
-	// float gamma = 2.2;
-    // vec3 hdrColor = texture(mapEnv, uv).rgb;
+	vec3 reflectVec = normalize(reflect(v, Normal));
 
-    //  // exposure tone mapping
-    // vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
+	vec2 uv = vec2(atan(reflectVec.z, reflectVec.x), asin(reflectVec.y)) / vec2(2.0 * PI, PI) + 0.5;
 
-    // // gamma correction
-    // mapped = pow(mapped, vec3(1.0 / gamma));
+	float gamma = 2.2;
+    vec3 hdrColor = texture(mapEnv, uv).rgb;
 
-	// mapped += fresnel * 0.15;
+     // exposure tone mapping
+    vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
 
-	FragColor = vec4( vec3( 1.0 ), 0.3 );
+    // gamma correction
+    mapped = pow(mapped, vec3(1.0 / gamma));
+
+	mapped += fresnel * 0.01;
+
+	vec4 reflections = vec4( mapped * fresnel, 0.4 * fresnel ).rgba;
+
+	// get refraction vector
+	vec3 refractVec = normalize( refract( normalize( v ), normalize( Normal ), 1.0 / 1.56 ) );
+
+	vec4 inner = texture(mapInner, screenUV + ( refractVec.xy * 0.2 ) ).rgba;
+
+	FragColor = mix( inner, reflections, fresnel );
+
+	//FragColor =  vec4( normalize( Normal ), 1.0 );
 
 	// scene = vec4( mapped, 0.3 );
 

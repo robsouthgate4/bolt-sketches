@@ -20,6 +20,8 @@ import CopyPass from "@/webgl/modules/post/passes/CopyPass";
 
 import debugVertexShader from "./programs/debug/shaders/vertexShader.glsl";
 import debugFragmentShader from "./programs/debug/shaders/fragmentShader.glsl";
+
+
 import SnowProgram from "./programs/snow";
 
 export default class extends Base {
@@ -106,19 +108,19 @@ export default class extends Base {
 	// construct the sketch
 	async initSketch() {
 
-		// this.gBuffer = new FBO( { width: this.canvas.width, height: this.canvas.height } );
-		// this.gBuffer.bind();
-		// this.gBufferRBO = new RBO( { width: this.canvas.width, height: this.canvas.height } );
-		// this.gBuffer.unbind();
+		this.gBuffer = new FBO( { width: this.canvas.width, height: this.canvas.height } );
+		this.gBuffer.bind();
+		this.gBufferRBO = new RBO( { width: this.canvas.width, height: this.canvas.height } );
+		this.gBuffer.unbind();
 
-		// this.sceneTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
-		// this.normalTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
+		this.sceneTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
+		this.normalTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
 
-		// this.gBuffer.bind();
-		// this.gBuffer.addAttachment( this.sceneTexture, COLOR_ATTACHMENT0 + 1 );
-		// this.gBuffer.addAttachment( this.normalTexture, COLOR_ATTACHMENT0 + 2 );
-		// this.gBuffer.setDrawBuffers();
-		// this.gBuffer.unbind();
+		this.gBuffer.bind();
+		this.gBuffer.addAttachment( this.sceneTexture, COLOR_ATTACHMENT0 + 1 );
+		this.gBuffer.addAttachment( this.normalTexture, COLOR_ATTACHMENT0 + 2 );
+		this.gBuffer.setDrawBuffers();
+		this.gBuffer.unbind();
 
 		this.snow = new Snow();
 		await this.snow.init();
@@ -179,6 +181,8 @@ export default class extends Base {
 		await environmentTexture.load();
 		this.background = new Background( { map: environmentTexture } );
 
+		this.background.transform.position = vec3.fromValues( 0, 0, - 2 );
+
 		const monsterColor = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/monster-color.png" } );
 		await monsterColor.load();
 
@@ -209,11 +213,11 @@ export default class extends Base {
     		indices: triangleIndices
     	} );
 
-		// const debugProgram = new Program( debugVertexShader, debugFragmentShader );
-		// debugProgram.activate();
-		// debugProgram.setTexture( "map", this.sceneTexture );
+		const debugProgram = new Program( debugVertexShader, debugFragmentShader );
+		debugProgram.activate();
+		debugProgram.setTexture( "map", this.sceneTexture );
 
-		// this.debugDrawSet = new DrawSet( fullScreenTriangle, debugProgram );
+		this.debugDrawSet = new DrawSet( fullScreenTriangle, debugProgram );
 
 		this.assetsLoaded = true;
 
@@ -224,9 +228,9 @@ export default class extends Base {
 		this.bolt.resizeCanvasToDisplay();
 
 		this.camera.updateProjection( window.innerWidth / window.innerHeight );
-		// this.gBuffer.resize( this.width, this.height );
-		// this.gBufferRBO.resize( this.width, this.height );
-		// this.post.resize( this.width, this.height );
+		this.gBuffer.resize( this.width, this.height );
+		this.gBufferRBO.resize( this.width, this.height );
+		//this.post.resize( this.width, this.height );
 
 	}
 
@@ -242,32 +246,28 @@ export default class extends Base {
 
 		this.orbit.update();
 
-		// this.debugDrawSet.program.activate();
-		// this.debugDrawSet.program.setTexture( "mapNormal", this.normalTexture );
-		// this.debugDrawSet.program.setTexture( "map", this.sceneTexture );
-		// this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
+		this.debugDrawSet.program.activate();
+		this.debugDrawSet.program.setTexture( "mapNormal", this.normalTexture );
+		this.debugDrawSet.program.setTexture( "map", this.sceneTexture );
 
-		// this.gBuffer.bind();
-		// this.bolt.clear( 0, 0, 0, 0 );
+		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 
-		// // draw background
-		// this.bolt.disableDepth();
-		// this.bolt.draw( this.background );
-		// this.bolt.enableDepth();
+		this.gBuffer.bind();
 
-		// this.bolt.draw( this.monster );
+		this.bolt.clear( 0, 0, 0, 1 );
 
-		// this.globeSnowNode.draw = true;
-		// this.bolt.draw( this.globeSnowNode );
+		// draw background
+		this.bolt.disableDepth();
+		this.bolt.draw( this.background );
+		this.bolt.enableDepth();
 
+		this.monster.render();
 
-		// this.snow.render( { elapsed, delta } );
+		this.snow.render( { elapsed, delta } );
 
-		// this.globeGlassNode.draw = true;
-		// this.bolt.draw( this.globeGlassNode );
-		// this.globeGlassNode.draw = false;
+		this.gBuffer.unbind();
 
-		// this.gBuffer.unbind();
+		this.bolt.clear( 0, 0, 0, 1 );
 
 		//this.bolt.draw( this.debugDrawSet );
 
@@ -275,8 +275,7 @@ export default class extends Base {
 
 
 		// // draw scenery
-		// this.monster.render();
-		//this.snow.render( { elapsed, delta } );
+		//this.monster.render();
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 		this.bolt.clear( 0, 0, 0, 1 );
@@ -285,18 +284,18 @@ export default class extends Base {
 		this.bolt.draw( this.background );
 		this.bolt.enableDepth();
 
-		this.bolt.draw( this.monster );
+		this.bolt.draw( this.snowGlobeGLTF );
 
+		this.globeProgram.activate();
+		this.globeProgram.setTexture( "mapInner", this.sceneTexture );
 
-		// this.globeSnowNode.draw = true;
-		// this.bolt.draw( this.globeSnowNode );
-		//this.globeGlassNode.draw = false;
-		//this.bolt.draw( this.snowGlobeGLTF );
+		this.globeSnowNode.draw = true;
+		this.bolt.draw( this.globeSnowNode );
+		this.globeGlassNode.draw = false;
 
-
-		//this.globeGlassNode.draw = true;
-		//this.bolt.draw( this.globeGlassNode );
-		//this.globeGlassNode.draw = false;
+		this.globeGlassNode.draw = true;
+		this.bolt.draw( this.globeGlassNode );
+		this.globeGlassNode.draw = false;
 
 
 	}

@@ -8,9 +8,9 @@ in vec3 NormalEyeSpace;
 in vec2 Uv;
 in vec3 WorldPosition;
 
-// layout(location = 0) out vec4 defaultColor;
-// layout(location = 1) out vec4 scene;
-// layout(location = 2) out vec4 normal;
+layout(location = 0) out vec4 defaultColor;
+layout(location = 1) out vec4 scene;
+layout(location = 2) out vec4 normal;
 
 uniform vec2 cameraPlanes;
 uniform vec4 baseColor;
@@ -25,7 +25,6 @@ uniform float featherB;
 in vec3 ViewVector;
 in vec3 Pos;
 
-out vec4 FragColor;
 
 void main() {
 
@@ -46,11 +45,8 @@ void main() {
 
 	if( Pos.y < -0.35 ) discard;
 
-	float alpha = 0.0;
-	FragColor = vec4( color, alpha );
-
-    // scene = vec4( color, 0.0 );
-	// defaultColor = scene;
-    // normal = vec4(0.0);
+    scene = vec4( color, d );
+	defaultColor = scene;
+    normal = vec4(0.0);
 
 }

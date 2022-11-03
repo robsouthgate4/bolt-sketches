@@ -43,6 +43,7 @@ export default class Bolt {
 
 		this._dpi = dpi;
 
+		this.enableAlpha();
 		this.enableCullFace();
 		this.cullFace( BACK );
 		this.resizeCanvasToDisplay();

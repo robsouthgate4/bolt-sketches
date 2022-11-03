@@ -23,9 +23,9 @@ void main() {
 
   gl_Position = projection * view * model * vec4(aPosition, 1.0);
 
-  Normal = aNormal;
+  Normal = ( model * vec4( aNormal, 0.0 ) ).xyz;
 
-  ViewVector = worldPos - cameraPosition;
+  ViewVector = normalize( worldPos - cameraPosition );
 
   Uv = aUv;
 
