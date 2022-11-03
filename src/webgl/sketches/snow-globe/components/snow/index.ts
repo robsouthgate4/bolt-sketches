@@ -158,12 +158,12 @@ export default class Snow {
 			const range = 0.1;
 
 			const normal = Math.random() * 2 - 1;
-			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.1;
+			const scale = ( Math.random() * 0.5 + 0.5 ) + 0.4;
 
 			scales.push( scale );
 			normals.push( normal, normal, normal );
 
-			offsets.push( ( Math.random() * 2 - 1 ) * 0.3, ( Math.random() * 0.1 ), ( Math.random() * 0.1 ) );
+			offsets.push( ( Math.random() * 2 - 1 ) * 1.0, Math.random() * 0.7 + 0.5, ( Math.random() * 2 - 1 ) * 0.7 );
 
 			velocities.push( 0, 0, 0 );
 
@@ -288,14 +288,14 @@ export default class Snow {
 			.setVbo( groupsVBO, 1, 9, FLOAT, 0, 0 )
 			.uniformFloat( "shadowStrength", this.config.shadowStrength )
 			.uniformFloat( "particleScale", this.config.particleScale )
-			.uniformFloat( "colorMode", this.config.colorMode === "light" ? 0 : 1 )
-			.setViewport( 0, 0, this.canvas.width, this.canvas.height );
+			.uniformFloat( "colorMode", this.config.colorMode === "light" ? 0 : 1 );
 
 	}
 
 	render( { elapsed, delta }: { elapsed: number, delta: number } ) {
 
 		this.particleDrawState
+			.setViewport( 0, 0, this.canvas.width, this.canvas.height )
 			.uniformFloat( "time", elapsed )
 			.draw();
 

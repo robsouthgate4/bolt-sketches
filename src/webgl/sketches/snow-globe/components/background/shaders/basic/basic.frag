@@ -2,6 +2,10 @@
 
 precision highp float;
 
+// layout(location = 0) out vec4 defaultColor;
+// layout(location = 1) out vec4 scene;
+// layout(location = 2) out vec4 normal;
+
 uniform sampler2D map;
 in vec2 Uv;
 
@@ -11,6 +15,12 @@ out vec4 FragColor;
 void main() {
 
     vec3 color = texture( map, Uv ).rgb;
+
+	color.b += 0.3;
+
+	// scene = vec4( color, 1.0 );
+	// normal = vec4( 0.0 );
+	// defaultColor = scene;
 
 	FragColor = vec4( color, 1.0 );
 

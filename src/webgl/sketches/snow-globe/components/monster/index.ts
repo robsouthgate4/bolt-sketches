@@ -1,7 +1,12 @@
-import Bolt, { DrawSet, Mesh, Program, Texture2D } from "@/webgl/libs/bolt";
+import Bolt, { DrawSet, Mesh, ONE, ONE_MINUS_SRC_ALPHA, Program, SRC_ALPHA, Texture2D, ZERO } from "@/webgl/libs/bolt";
 
 import vertexShader from "./shaders/basic/basic.vert";
 import fragmentShader from "./shaders/basic/basic.frag";
+
+import gBufferVertexShader from "./shaders/gbuffer/gbuffer.vert";
+import gBufferFragmentShader from "./shaders/gbuffer/gbuffer.frag";
+
+
 import Plane from "@/webgl/modules/primitives/Plane";
 import { vec3 } from "gl-matrix";
 import GlobalGui from "../../globals/GlobalGui";
@@ -11,6 +16,8 @@ export default class Monster extends DrawSet {
 	bolt = Bolt.getInstance()
 	gui = GlobalGui.getInstance();
 	settings: { depth: { power: number; offset: number; featherA: number; featherB: number; } };
+	defaultProgram: Program;
+	gBufferProgram: Program;
 
 	constructor( { map, mapDepth }: { map: Texture2D, mapDepth: Texture2D } ) {
 
@@ -18,16 +25,22 @@ export default class Monster extends DrawSet {
 
 		const m = new Mesh( plane );
 
-		const p = new Program( vertexShader, fragmentShader );
+		const defaultP = new Program( gBufferVertexShader, gBufferFragmentShader );
 
-		p.activate();
-		p.setTexture( "map", map );
-		p.setTexture( "mapDepth", mapDepth );
-		p.transparent = true;
+		defaultP.activate();
+		defaultP.transparent = true;
+		defaultP.blendFunction = { src: ONE, dst: ZERO };
+		defaultP.setTexture( "map", map );
+		defaultP.setTexture( "mapDepth", mapDepth );
 
-		super( m, p );
+		super( m, defaultP );
 
-		this.transform.scale = vec3.fromValues( 0.3, 0.3, 0.3 );
+		this.defaultProgram = defaultP;
+
+		const s = 1.5;
+
+		this.transform.scale = vec3.fromValues( s, s, s );
+		this.transform.position = vec3.fromValues( 0, 0.96, 0 );
 
 		this.settings = {
 			depth: {
@@ -44,7 +57,6 @@ export default class Monster extends DrawSet {
 		depthSettings.add( this.settings.depth, "offset", 0, 5, 0.01 );
 		depthSettings.add( this.settings.depth, "featherA", 0, 1, 0.01 );
 		depthSettings.add( this.settings.depth, "featherB", 0, 1, 0.01 );
-
 
 	}
 

@@ -205,7 +205,7 @@ export default class DrawState {
 
 		}
 
-		this._viewport && this._bolt.setViewPort( this._viewport.offsetX, this._viewport.offsetY, this._viewport.width, this._viewport.height );
+		//this._viewport && this._bolt.setViewPort( this._viewport.offsetX, this._viewport.offsetY, this._viewport.width, this._viewport.height );
 
 		this._clearColor && this._bolt.clear( this._clearColor.r, this._clearColor.g, this._clearColor.b, this._clearColor.a );
 

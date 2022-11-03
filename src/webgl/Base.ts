@@ -4,6 +4,8 @@
 import Stats from "stats.js";
 
 import { glSettings } from "@webgl/globals/constants";
+import EventListeners from "./modules/event-listeners";
+import { GL_UPDATE_TOPIC } from "./modules/event-listeners/constants";
 
 const { DEBUG_FPS } = glSettings;
 
@@ -20,6 +22,7 @@ export default abstract class Base {
 	delta: number;
 	currentTime: number;
 	lastTime: number;
+	eventListeners = EventListeners.getInstance()
 
 	constructor() {
 
@@ -96,6 +99,8 @@ export default abstract class Base {
 		this.elapsed = timestamp * 0.001;
 		this.delta = this.elapsed - this.lastTime;
 		this.lastTime = this.elapsed;
+
+		this.eventListeners.publish( GL_UPDATE_TOPIC, { elapsed: this.elapsed, delta: this.delta } );
 
 		this.earlyUpdate( this.elapsed, this.delta );
 		this.update( this.elapsed, this.delta );

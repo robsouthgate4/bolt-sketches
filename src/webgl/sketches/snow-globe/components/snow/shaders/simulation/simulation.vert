@@ -27,7 +27,7 @@ uniform float particleSpeed;
 uniform float curlStrength;
 uniform sampler2D mapDistanceVolume;
 uniform sampler2D mapNormalVolume;
-
+uniform vec3 offset;
 
 
 #define PI 3.1415
@@ -267,7 +267,7 @@ void main() {
   //pos += vec3( boxMin );
   float sdfScale = 1.0;
 
-  vec3 p = pos / sdfScale;
+  vec3 p = (pos - vec3( 0.0, 0.9, 0.0 )) / sdfScale;
 
   // vec4 sdfDistance = sampleAs3DTexture( mapDistanceVolume, p + vec3( 0.5 ), 128., 11., 11. );
   // vec4 sdfNormal = sampleAs3DTexture( mapNormalVolume, p + vec3( 0.5 ), 128., 8., 16. );
@@ -277,7 +277,7 @@ void main() {
   // vec3 norm = sdfNormal.rgb * 2.0 - 1.0;
 
 
-  float sdfGlobe  = sdSphere( p, 0.5 );
+  float sdfGlobe  = sdSphere( p, 1.23 );
   vec3 sdfNormal = calcNormalSDF( p, 0.001 );
 
 
@@ -289,17 +289,19 @@ void main() {
 
   //vel += c * 1.0;
 
-  if(sdfGlobe < 0.0) {
+  if(sdfGlobe > -0.015) {
 
-    vel += c * 0.5;
+
+    vel *= -1.0;
+    //vel *= 2.0;
+
     //force -= sdfNormal * forceIn * sdfGlobe; // pull from outside
 
 
   } else {
 
    // force -= sdfNormal * forceOut * sdfGlobe; // pull from outside
-
-    vel *= -1.0;
+    vel += c * 0.5;
 
   }
 

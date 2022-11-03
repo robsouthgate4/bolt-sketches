@@ -334,23 +334,6 @@ export default class Mesh {
 
 	}
 
-	private _bindTextures( program: Program ) {
-
-		if ( ! program ) return;
-
-		if ( program.textures && program.textures.length > 0 ) {
-
-			for ( let i = 0; i < program.textures.length; i ++ ) {
-
-				const textureObject = program.textures[ i ];
-
-				textureObject.texture.textureUnit( program, textureObject.uniformName, i );
-
-			}
-
-		}
-
-	}
 	/**
 	 * Delete vao and associated buffers
 	 */
@@ -375,8 +358,6 @@ export default class Mesh {
 	 * @param  {Program} program
 	 */
 	draw( program: Program, node?: Node ) {
-
-		this._bindTextures( program );
 
 		if ( this._lineWidth ) {
 

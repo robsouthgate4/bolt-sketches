@@ -2,7 +2,12 @@
 
 precision highp float;
 
-out vec4 FragColor;
+//out vec4 FragColor;
+
+layout(location = 0) out vec4 defaultColor;
+layout(location = 1) out vec4 scene;
+layout(location = 2) out vec4 normal;
+
 
 in vec2 Uv;
 in vec3 Normal;
@@ -53,6 +58,8 @@ void main() {
 
     vec3 color = vec3( 0.9 );
 
-    FragColor = vec4( color, 1.0 );
+    scene = vec4( color, 1.0 );
+    defaultColor = scene;
+    normal = vec4( Normal, 1.0 );
 
 }

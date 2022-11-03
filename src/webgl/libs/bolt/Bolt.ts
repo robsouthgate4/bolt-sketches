@@ -43,9 +43,9 @@ export default class Bolt {
 
 		this._dpi = dpi;
 
-		this.enableAlpha();
 		this.enableCullFace();
 		this.cullFace( BACK );
+		this.resizeCanvasToDisplay();
 
 	}
 
@@ -73,6 +73,7 @@ export default class Bolt {
 	clear( r: number, g: number, b: number, a: number ) {
 
 		this._gl.clearColor( r, g, b, a );
+		//this._gl.colorMask( false, false, false, true );
 		this._gl.clear( this._gl.COLOR_BUFFER_BIT | this._gl.DEPTH_BUFFER_BIT );
 
 	}
@@ -117,6 +118,12 @@ export default class Bolt {
 	enableAlpha() {
 
 		this._gl.enable( BLEND );
+
+	}
+
+	disableAlpha() {
+
+		this._gl.disable( BLEND );
 
 	}
 
@@ -200,10 +207,8 @@ export default class Bolt {
 
 		let c = canvas || this._gl.canvas;
 
-		const dpi = Math.min( this._dpi, window.devicePixelRatio || 1 );
-
-		const displayWidth = c.clientWidth * dpi;
-		const displayHeight = c.clientHeight * dpi;
+		const displayWidth = c.clientWidth * this._dpi;
+		const displayHeight = c.clientHeight * this._dpi;
 
 		// Check if the this.gl.canvas is not the same size.
 		const needResize =
@@ -221,8 +226,10 @@ export default class Bolt {
 
 	resizeCanvasToSize( size: vec2 ) {
 
-		this._gl.canvas.width = size[ 0 ] * this._dpi;
-		this._gl.canvas.height = size[ 1 ] * this._dpi;
+		const dpi = this._dpi;
+
+		this._gl.canvas.width = size[ 0 ] * dpi;
+		this._gl.canvas.height = size[ 1 ] * dpi;
 
 	}
 
@@ -265,7 +272,11 @@ export default class Bolt {
 
 		this._camera.update();
 
+		let textureUnit = 0;
+
 		const render = ( node: Node ) => {
+
+			if ( node.parent && ! node.parent.draw ) return;
 
 			if ( ! node.draw ) return;
 
@@ -277,14 +288,25 @@ export default class Bolt {
 
 				const { program } = node;
 
-				node.updateMatrices( program, this._camera );
+				if ( program.textures && program.textures.length > 0 ) {
 
-				if ( program.transparent ) {
+					for ( let i = 0; i < program.textures.length; i ++ ) {
 
-					// set the current blend mode for bound shader
-					this._gl.blendFunc( program.blendFunction.src, program.blendFunction.dst );
+						textureUnit ++;
+
+						const textureObject = program.textures[ i ];
+
+						textureObject.texture.textureUnit( program, textureObject.uniformName, textureUnit );
+
+					}
 
 				}
+
+				node.updateMatrices( program, this._camera );
+
+				// set the current blend mode for bound shader
+				this._gl.blendFunc( program.blendFunction.src, program.blendFunction.dst );
+
 
 				if ( program.cullFace !== undefined ) {
 

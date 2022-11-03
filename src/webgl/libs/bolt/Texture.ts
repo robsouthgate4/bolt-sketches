@@ -147,6 +147,9 @@ export default abstract class Texture {
 
 		program.activate();
 		const textureUnit = this._gl.getUniformLocation( program.program, uniformName );
+
+		if ( ! textureUnit ) return;
+
 		this._gl.activeTexture( TEXTURE0 + unit );
 		this.bind();
 		this._gl.uniform1i( textureUnit, unit );

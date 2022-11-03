@@ -5,6 +5,8 @@ import fragmentShader from "./shaders/basic/basic.frag";
 
 export default class Background extends DrawSet {
 
+	initialProgram: Program;
+
 	constructor( { map } ) {
 
 		const p = new Program( vertexShader, fragmentShader );
@@ -18,6 +20,8 @@ export default class Background extends DrawSet {
 		} );
 
 		super( m, p );
+
+		this.initialProgram = p;
 
 	}
 
