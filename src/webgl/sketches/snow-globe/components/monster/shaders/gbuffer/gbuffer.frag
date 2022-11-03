@@ -39,13 +39,13 @@ void main() {
 
 	if( Pos.z < 0.15 ) {
 
-		//if( color.r < 0.2 ) discard;
+		if( color.r < 0.2 ) discard;
 
 	}
 
 	if( Pos.y < -0.35 ) discard;
 
-    scene = vec4( color, d );
+    scene = vec4( color, 1.0 );
 	defaultColor = scene;
     normal = vec4(0.0);
 

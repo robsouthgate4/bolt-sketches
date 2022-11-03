@@ -66,27 +66,27 @@ export default class Snow {
 
 		this.pointCloud = new Float32Array( pointsParsed );
 
-		this.volumeNormalTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/sdf-normal-a.png",
-			wrapS: CLAMP_TO_EDGE,
-			wrapT: CLAMP_TO_EDGE,
-			minFilter: NEAREST,
-			magFilter: NEAREST,
-			generateMipmaps: false,
-		} );
+		// this.volumeNormalTexture = new Texture2D( {
+		// 	imagePath: "/static/textures/volumes/sdf-normal-a.png",
+		// 	wrapS: CLAMP_TO_EDGE,
+		// 	wrapT: CLAMP_TO_EDGE,
+		// 	minFilter: NEAREST,
+		// 	magFilter: NEAREST,
+		// 	generateMipmaps: false,
+		// } );
 
-		await this.volumeNormalTexture.load();
+		// await this.volumeNormalTexture.load();
 
-		this.volumeDistanceTexture = new Texture2D( {
-			imagePath: "/static/textures/volumes/sdf-distance-a.png",
-			wrapS: CLAMP_TO_EDGE,
-			wrapT: CLAMP_TO_EDGE,
-			minFilter: NEAREST,
-			magFilter: NEAREST,
-			generateMipmaps: false,
-		} );
+		// this.volumeDistanceTexture = new Texture2D( {
+		// 	imagePath: "/static/textures/volumes/sdf-distance-a.png",
+		// 	wrapS: CLAMP_TO_EDGE,
+		// 	wrapT: CLAMP_TO_EDGE,
+		// 	minFilter: NEAREST,
+		// 	magFilter: NEAREST,
+		// 	generateMipmaps: false,
+		// } );
 
-		await this.volumeDistanceTexture.load();
+		// await this.volumeDistanceTexture.load();
 
 		this.assetsLoaded = true;
 
@@ -113,8 +113,8 @@ export default class Snow {
 		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
 		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
 		this.simulationProgram.setFloat( "time", 0 );
-		this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
-		this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
+		// this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
+		// this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.simulationProgramLocations = {
 			"oldPosition": 0,
@@ -266,8 +266,8 @@ export default class Snow {
 		const debugProgram = new Program( debugVertexShader, debugFragmentShader );
 
 		debugProgram.activate();
-		debugProgram.setTexture( 'mapNormal', this.volumeNormalTexture );
-		debugProgram.setTexture( 'mapDistance', this.volumeDistanceTexture );
+		// debugProgram.setTexture( 'mapNormal', this.volumeNormalTexture );
+		// debugProgram.setTexture( 'mapDistance', this.volumeDistanceTexture );
 
 		const debugMesh = new Mesh( new Plane() );
 		const debugDrawSet = new DrawSet( debugMesh, debugProgram );

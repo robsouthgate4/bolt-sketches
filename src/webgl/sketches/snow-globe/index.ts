@@ -252,24 +252,33 @@ export default class extends Base {
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 
-		this.gBuffer.bind();
+		// render to gbuffer
+		{
 
-		this.bolt.clear( 0, 0, 0, 1 );
+			this.gBuffer.bind();
 
-		// draw background
-		this.bolt.disableDepth();
-		this.bolt.draw( this.background );
-		this.bolt.enableDepth();
+			this.bolt.clear( 0, 0, 0, 1 );
 
-		this.monster.render();
+			// draw background
+			this.bolt.disableDepth();
+			this.bolt.draw( this.background );
+			this.bolt.enableDepth();
 
-		this.snow.render( { elapsed, delta } );
+			this.globeSnowNode.draw = true;
+			this.bolt.draw( this.globeSnowNode );
+			this.globeGlassNode.draw = false;
 
-		this.gBuffer.unbind();
+			this.monster.render();
 
-		this.bolt.clear( 0, 0, 0, 1 );
+			this.snow.render( { elapsed, delta } );
 
-		//this.bolt.draw( this.debugDrawSet );
+			this.gBuffer.unbind();
+
+			this.bolt.clear( 0, 0, 0, 1 );
+			//this.bolt.draw( this.debugDrawSet );
+
+		}
+
 
 
 
@@ -288,10 +297,6 @@ export default class extends Base {
 
 		this.globeProgram.activate();
 		this.globeProgram.setTexture( "mapInner", this.sceneTexture );
-
-		this.globeSnowNode.draw = true;
-		this.bolt.draw( this.globeSnowNode );
-		this.globeGlassNode.draw = false;
 
 		this.globeGlassNode.draw = true;
 		this.bolt.draw( this.globeGlassNode );

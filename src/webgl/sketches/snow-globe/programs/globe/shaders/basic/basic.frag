@@ -5,15 +5,14 @@ precision highp float;
 uniform sampler2D mapEnv;
 uniform sampler2D mapInner;
 uniform vec2 resolution;
-
-
-// layout(location = 0) out vec4 defaultColor;
-// layout(location = 1) out vec4 scene;
-// layout(location = 2) out vec4 normal;
+uniform float ior;
 
 in vec2 Uv;
 in vec3 Normal;
+in vec3 VNormal;
 in vec3 ViewVector;
+in vec3 ViewVectorCenter;
+in vec3 Eye;
 
 #define PI 3.141592
 
@@ -72,20 +71,19 @@ void main() {
 
 	mapped += fresnel * 0.01;
 
-	vec4 reflections = vec4( mapped * fresnel, 0.4 * fresnel ).rgba;
+	vec4 reflections = vec4( mapped * fresnel, 0.2 * fresnel ).rgba;
 
 	// get refraction vector
-	vec3 refractVec = normalize( refract( normalize( v ), normalize( Normal ), 1.0 / 1.56 ) );
+	vec3 refractVec = refract( normalize( ViewVectorCenter ), normalize( VNormal ) * 50., 1.0 / ior );
 
-	vec4 inner = texture(mapInner, screenUV + ( refractVec.xy * 0.2 ) ).rgba;
+	float innerR = texture(mapInner, screenUV + ( refractVec.xy * 0.058 ) ).r;
+	float innerG = texture(mapInner, screenUV + ( refractVec.xy * 0.054 ) ).g;
+	float innerB = texture(mapInner, screenUV + ( refractVec.xy * 0.05 ) ).b;
+
+	vec4 inner = vec4( innerR, innerG, innerB, 1.0 );
+
 
 	FragColor = mix( inner, reflections, fresnel );
 
-	//FragColor =  vec4( normalize( Normal ), 1.0 );
-
-	// scene = vec4( mapped, 0.3 );
-
-	// defaultColor = scene;
-	// normal = vec4( normalize( Normal ), 1.0 );
 
 }
