@@ -14,9 +14,7 @@ in vec2 Uv;
 
 void main() {
 
-    vec3 color = texture( map, Uv ).rgb;
-
-	color.b += 0.3;
+    vec3 color = vec3( 0.8 );
 
 	scene = vec4( color, 1.0 );
 	normal = vec4( 0.0 );

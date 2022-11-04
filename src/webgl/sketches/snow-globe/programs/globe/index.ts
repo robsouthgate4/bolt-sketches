@@ -1,4 +1,4 @@
-import Bolt, { BACK, ONE, ONE_MINUS_SRC_ALPHA, Program, Texture2D } from "@/webgl/libs/bolt";
+import Bolt, { BACK, ONE, ONE_MINUS_SRC_ALPHA, Program, Texture2D, TextureCube } from "@/webgl/libs/bolt";
 
 import vertexShader from "./shaders/basic/basic.vert";
 import fragmentShader from "./shaders/basic/basic.frag";

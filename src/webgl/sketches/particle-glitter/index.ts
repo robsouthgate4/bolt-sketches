@@ -572,12 +572,12 @@ export default class extends Base {
 		this.simulationProgram.setFloat( "repellorScale", d );
 		this.simulationProgram.setFloat( "delta", delta );
 
-		this.transformFeedback.compute();
+		this.transformFeedback.compute( this.simulationProgram );
 
 		const bgLight = this.config.light.backgroundColor;
 		const bgDark = this.config.dark.backgroundColor;
 
-		this.post.begin();
+		//this.post.begin();
 
 		this.particleDrawState
 			.uniformFloat( "colorMode", this.colorEase.value )
@@ -594,7 +594,7 @@ export default class extends Base {
 
 		//this.bolt.draw( this.lineDrawSet );
 
-		this.post.end();
+		//this.post.end();
 
 	}
 

@@ -12,11 +12,11 @@ in vec3 FragPosition;
 in vec3 Color;
 
 uniform vec4 baseColor;
-uniform sampler2D baseTexture;
+uniform sampler2D mapAlbedo;
 
 void main() {
 
-    vec4 color = texture(baseTexture, Uv);
+    vec4 color = texture(mapAlbedo, Uv);
     FragColor = color;
 
 }

@@ -1,10 +1,11 @@
-import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform, GeometryBuffers } from "@/webgl/libs/bolt";
+import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform, GeometryBuffers, TextureCube, Texture, NEAREST, BACK } from "@/webgl/libs/bolt";
 import { mat4, quat, vec3, vec4 } from "gl-matrix";
 import { Accessor, GlTf, Material, Mesh as GLTFMesh, MeshPrimitive, Node as GLTFNode, Texture as GLTFTexture, Skin as GLTFSkin, BufferView, Animation as GLTFAnimation } from "./types/gltf";
 import { TypedArray } from "./types/typedArray";
 
 import vertexShader from "./shaders/color/color.vert";
 import fragmentShader from "./shaders/color/color.frag";
+
 import skinVertexShader from "./shaders/skin/skin.vert";
 import skinFragmentShader from "./shaders/skin/skin.frag";
 
@@ -60,8 +61,13 @@ export default class GLTFLoader {
 	private _json!: GlTf;
 	private _flattenHierarchy: boolean;
 	private _drawSetsFlattened: DrawSet[];
+	private _irradianceMap: TextureCube;
+	private _radianceMap: TextureCube;
 
-	constructor( bolt: Bolt, flattenHierarchy = false ) {
+	constructor( bolt: Bolt, flattenHierarchy = false, environmentMaps?: { irradianceMap: TextureCube, radianceMap: TextureCube } ) {
+
+		this._irradianceMap = environmentMaps.irradianceMap || undefined;
+		this._radianceMap = environmentMaps.radianceMap || undefined;
 
 		this._bolt = bolt;
 		this._flattenHierarchy = flattenHierarchy;
@@ -103,7 +109,6 @@ export default class GLTFLoader {
 
 		// arrange nodes with correct transforms
 		this._nodes = this._json.nodes!.map( ( node, index ) => this._parseNode( index, node ) );
-
 
 		const animations = {} as Animation;
 
@@ -363,7 +368,7 @@ export default class GLTFLoader {
 
 	}
 
-	_parseMaterials( gltf: GlTf, material: Material, index: number ): Program {
+	 _parseMaterials( gltf: GlTf, material: Material, index: number ): Program {
 
 		//TODO:Full PBR program setup
 
@@ -395,6 +400,8 @@ export default class GLTFLoader {
 
 		program.name = material.name;
 
+		program.cullFace = BACK;
+
 		if ( material.extensions !== undefined ) {
 
 			if ( material.extensions.KHR_materials_pbrSpecularGlossiness !== undefined ) {
@@ -411,9 +418,14 @@ export default class GLTFLoader {
 
 			program.activate();
 
+
+			//program.setTexture( "mapAlbedo", new Texture2D() );
+			// program.setTexture( "mapRadiance", this._radianceMap );
+			// program.setTexture( "mapIrradiance", this._irradianceMap );
+
 			if ( baseColorTexture !== undefined ) {
 
-				program.setTexture( "baseTexture", this._textures[ baseColorTexture.index ] );
+				program.setTexture( "mapAlbedo", this._textures[ baseColorTexture.index ] );
 
 			}
 
@@ -463,6 +475,8 @@ export default class GLTFLoader {
 				wrapT: s.wrapT || CLAMP_TO_EDGE,
 			} );
 
+			boltTexture.flipY = false;
+
 			await boltTexture.load();
 
 		}
@@ -474,6 +488,8 @@ export default class GLTFLoader {
 				wrapS: s.wrapS || CLAMP_TO_EDGE,
 				wrapT: s.wrapT || CLAMP_TO_EDGE,
 			} );
+
+			boltTexture.flipY = false;
 
 			boltTexture.minFilter = s.minFilter! || LINEAR;
 			boltTexture.magFilter = s.magFilter! || LINEAR;

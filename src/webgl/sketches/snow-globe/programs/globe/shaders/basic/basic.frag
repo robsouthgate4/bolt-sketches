@@ -47,7 +47,7 @@ void main() {
 
 	vec2 screenUV = gl_FragCoord.xy / resolution;
 
-	float exposure = 0.2;
+	float exposure = 0.05;
 
 	vec3 v = ViewVector;
 

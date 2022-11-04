@@ -104,7 +104,7 @@ void main() {
 
     gl_Position = projection * view * model * vec4( transformed, 1.0 );
 
-    float scale = 2.5;
+    float scale = aScale * 2.5;
 
     gl_PointSize = scale;
 

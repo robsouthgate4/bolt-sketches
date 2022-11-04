@@ -19,6 +19,7 @@ export default class Node {
 	private _transform!: Transform;
 	private _normalMatrix: mat4;
 	private _modelViewMatrix: mat4;
+	private _inverseModelViewMatrix: mat4;
 	private _draw: boolean;
 	private _cameraDepth!: number;
 
@@ -28,6 +29,7 @@ export default class Node {
 		this._modelMatrix = mat4.create();
 		this._modelViewMatrix = mat4.create();
 		this._normalMatrix = mat4.create();
+		this._inverseModelViewMatrix = mat4.create();
 		this._children = [];
 		this._parent = null;
 		this._transform = new Transform();
@@ -146,9 +148,15 @@ export default class Node {
 		program.setMatrix4( "model", this._modelMatrix );
 
 		// Generate normal matrix
-		mat4.multiply( this._modelViewMatrix, this._modelMatrix, camera.view );
-		mat4.invert( this._normalMatrix, this._modelViewMatrix );
-		mat4.transpose( this._normalMatrix, this._normalMatrix );
+		mat4.multiply( this._modelViewMatrix, camera.view, this._modelMatrix );
+
+		program.setMatrix4( "modelView", this._modelViewMatrix );
+
+		mat4.invert( this._inverseModelViewMatrix, this._modelViewMatrix );
+
+		program.setMatrix4( "modelViewInverse", this._inverseModelViewMatrix );
+
+		mat4.transpose( this._normalMatrix, this._inverseModelViewMatrix );
 
 		program.setMatrix4( "normal", this._normalMatrix );
 

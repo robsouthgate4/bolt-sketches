@@ -25,8 +25,6 @@ export default class Monster extends DrawSet {
 		const defaultP = new Program( gBufferVertexShader, gBufferFragmentShader );
 
 		defaultP.activate();
-		//defaultP.transparent = true;
-		//defaultP.blendFunction = { src: ONE, dst: ONE };
 		defaultP.setTexture( "map", map );
 		defaultP.setTexture( "mapDepth", mapDepth );
 
@@ -34,10 +32,10 @@ export default class Monster extends DrawSet {
 
 		this.defaultProgram = defaultP;
 
-		const s = 1.5;
+		const s = 0.75;
 
 		this.transform.scale = vec3.fromValues( s, s, s );
-		this.transform.position = vec3.fromValues( 0, 0.9, - 0.5 );
+		this.transform.position = vec3.fromValues( 0, 0.5, 0.0 );
 
 		this.settings = {
 			depth: {

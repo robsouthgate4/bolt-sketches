@@ -10,7 +10,6 @@ export default class Program {
 	private _vertexShader: WebGLShader;
 	private _fragmentShader: WebGLShader;
 	private _program: WebGLProgram;
-	private _textureUnit: number;
 	private _textures: TextureObject[];
 	private _uniforms: UniformObject;
 	private _vertexShaderSource!: string;
@@ -31,7 +30,6 @@ export default class Program {
 		this._vertexShaderSource = vertexShaderSrc;
 		this._fragmentShaderSource = fragmentShaderSrc;
 
-		this._textureUnit = 0;
 		this._textures = <TextureObject[]>[];
 
 		this._uniforms = {};
@@ -270,16 +268,6 @@ export default class Program {
 	public get program(): WebGLProgram {
 
 		return this._program;
-
-	}
-	public get textureUnit(): number {
-
-		return this._textureUnit;
-
-	}
-	public set textureUnit( value: number ) {
-
-		this._textureUnit = value;
 
 	}
 	public get textures(): TextureObject[] {

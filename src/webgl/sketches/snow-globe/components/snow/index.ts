@@ -1,4 +1,4 @@
-import Bolt, { CLAMP_TO_EDGE, DrawSet, DYNAMIC_DRAW, FLOAT, Mesh, NEAREST, POINTS, Program, STATIC_DRAW, Texture2D, VBO } from "@/webgl/libs/bolt";
+import Bolt, { DrawSet, DYNAMIC_DRAW, FLOAT, Mesh, POINTS, Program, STATIC_DRAW, Texture2D, VBO } from "@/webgl/libs/bolt";
 import DrawState from "@/webgl/modules/draw-state";
 import Plane from "@/webgl/modules/primitives/Plane";
 import TransformFeedback from "@/webgl/modules/transform-feedback";
@@ -66,28 +66,6 @@ export default class Snow {
 
 		this.pointCloud = new Float32Array( pointsParsed );
 
-		// this.volumeNormalTexture = new Texture2D( {
-		// 	imagePath: "/static/textures/volumes/sdf-normal-a.png",
-		// 	wrapS: CLAMP_TO_EDGE,
-		// 	wrapT: CLAMP_TO_EDGE,
-		// 	minFilter: NEAREST,
-		// 	magFilter: NEAREST,
-		// 	generateMipmaps: false,
-		// } );
-
-		// await this.volumeNormalTexture.load();
-
-		// this.volumeDistanceTexture = new Texture2D( {
-		// 	imagePath: "/static/textures/volumes/sdf-distance-a.png",
-		// 	wrapS: CLAMP_TO_EDGE,
-		// 	wrapT: CLAMP_TO_EDGE,
-		// 	minFilter: NEAREST,
-		// 	magFilter: NEAREST,
-		// 	generateMipmaps: false,
-		// } );
-
-		// await this.volumeDistanceTexture.load();
-
 		this.assetsLoaded = true;
 
 		this.particleProgram = new Program( particlesVertexShader, particlesFragmentShader );
@@ -113,8 +91,6 @@ export default class Snow {
 		this.simulationProgram.setFloat( "repellorStrength", this.config.repellorStrength );
 		this.simulationProgram.setFloat( "curlStrength", this.config.curlStrength );
 		this.simulationProgram.setFloat( "time", 0 );
-		// this.simulationProgram.setTexture( "mapNormalVolume", this.volumeNormalTexture );
-		// this.simulationProgram.setTexture( "mapDistanceVolume", this.volumeDistanceTexture );
 
 		this.simulationProgramLocations = {
 			"oldPosition": 0,
@@ -224,20 +200,6 @@ export default class Snow {
 					requiresSwap: false
 				},
 				{
-					vbo1: randomsVBO,
-					vbo2: randomsVBO,
-					attributeLocation: this.simulationProgramLocations.random,
-					size: 3,
-					requiresSwap: false
-				},
-				{
-					vbo1: groupsVBO,
-					vbo2: groupsVBO,
-					attributeLocation: this.simulationProgramLocations.groupID,
-					size: 1,
-					requiresSwap: false
-				},
-				{
 					vbo1: particleIDsVBO,
 					vbo2: particleIDsVBO,
 					attributeLocation: this.simulationProgramLocations.particleID,
@@ -251,7 +213,7 @@ export default class Snow {
 
 		const pointMesh = new Mesh( {
 			positions,
-			normals,
+			//normals,
 			indices,
 		} ).setDrawType( POINTS );
 

@@ -1,7 +1,7 @@
 
 
 import Base from "@webgl/Base";
-import Bolt, { Texture2D, CameraPersp, DrawSet, FLOAT, RGBA16F, RGBA, FBO, COLOR_ATTACHMENT0, RBO, Program, Mesh, Node } from "@/webgl/libs/bolt";
+import Bolt, { Texture2D, CameraPersp, DrawSet, FLOAT, RGBA16F, RGBA, FBO, COLOR_ATTACHMENT0, RBO, Program, Mesh, Node, TextureCube, LINEAR } from "@/webgl/libs/bolt";
 
 import { vec3 } from "gl-matrix";
 import Orbit from "@/webgl/modules/orbit";
@@ -23,7 +23,7 @@ import debugFragmentShader from "./programs/debug/shaders/fragmentShader.glsl";
 
 
 import SnowProgram from "./programs/snow";
-
+import UnlitProgram from "./programs/unlit";
 export default class extends Base {
 
 	canvas: HTMLCanvasElement;
@@ -56,7 +56,12 @@ export default class extends Base {
 	environmentHDRI: Texture2D;
 	globeSnowNode!: Node;
 	globeGlassNode!: Node;
+	globeBaseNode!: Node;
+	floorNode!: Node;
 	snowProgram: SnowProgram;
+	innerGlobeGroup: Node;
+	unlitProgram: Program;
+	tree1node: Node;
 
 	constructor() {
 
@@ -88,8 +93,8 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 0, 1, 5 ),
-			target: vec3.fromValues( 0, 1, 0 ),
+			position: vec3.fromValues( 0, 0.5, 5 ),
+			target: vec3.fromValues( 0, 0.5, 0 ),
 		} );
 
 		this.orbit = new Orbit( this.camera, {
@@ -108,24 +113,53 @@ export default class extends Base {
 	// construct the sketch
 	async initSketch() {
 
-		this.gBuffer = new FBO( { width: this.canvas.width, height: this.canvas.height } );
-		this.gBuffer.bind();
-		this.gBufferRBO = new RBO( { width: this.canvas.width, height: this.canvas.height } );
-		this.gBuffer.unbind();
-
+		this.gBuffer = new FBO( { width: this.canvas.width, height: this.canvas.height, depth: true } );
 		this.sceneTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
-		this.normalTexture = new Texture2D( { width: this.canvas.width, height: this.canvas.height } );
 
 		this.gBuffer.bind();
 		this.gBuffer.addAttachment( this.sceneTexture, COLOR_ATTACHMENT0 + 1 );
-		this.gBuffer.addAttachment( this.normalTexture, COLOR_ATTACHMENT0 + 2 );
 		this.gBuffer.setDrawBuffers();
 		this.gBuffer.unbind();
 
 		this.snow = new Snow();
 		await this.snow.init();
 
-		this.gtlfLoader = new GLTFLoader( this.bolt );
+		const irradiance = new TextureCube( {
+			imagePath: "/static/textures/cubeMaps/irradiance/",
+			files: {
+				px: "px.jpeg",
+				nx: "nx.jpeg",
+				py: "py.jpeg",
+				ny: "ny.jpeg",
+				pz: "pz.jpeg",
+				nz: "nz.jpeg"
+			},
+			generateMipmaps: false,
+			minFilter: LINEAR,
+			magFilter: LINEAR
+		} );
+
+
+		await irradiance.load();
+
+		const radiance = new TextureCube( {
+			imagePath: "/static/textures/cubeMaps/radiance/",
+			files: {
+				px: "px.jpeg",
+				nx: "nx.jpeg",
+				py: "py.jpeg",
+				ny: "ny.jpeg",
+				pz: "pz.jpeg",
+				nz: "nz.jpeg"
+			},
+			generateMipmaps: false,
+			minFilter: LINEAR,
+			magFilter: LINEAR
+		} );
+
+		await radiance.load();
+
+		this.gtlfLoader = new GLTFLoader( this.bolt, false, { irradianceMap: irradiance, radianceMap: radiance } );
 
 		const hdrLoad = await fetch( "/static/textures/hdr/snow.hdr" );
 		const hdriBuffer = await hdrLoad.arrayBuffer();
@@ -139,21 +173,86 @@ export default class extends Base {
 
 		this.environmentHDRI.setFromData( hdrParsed.data, hdrParsed.shape[ 0 ], hdrParsed.shape[ 1 ] );
 
-		this.snowGlobeGLTF = await this.gtlfLoader.load( "/static/models/gltf/snowGlobe.glb" );
+		this.snowGlobeGLTF = await this.gtlfLoader.load( "/static/models/gltf/snowGlobe5.glb" );
 
 		this.globeProgram = new GlobeProgram( { mapEnv: this.environmentHDRI } );
-
 		this.snowProgram = new SnowProgram( { mapEnv: this.environmentHDRI } );
+		this.unlitProgram = new UnlitProgram();
+
+		this.tree1node = new Node();
+		this.innerGlobeGroup = new Node();
 
 		this.snowGlobeGLTF.traverse( ( node ) => {
 
-			if ( node.name.includes( "precociousmouse_a_cute_scary_candy_festive_monster_in_a_snowy_e" ) ) {
 
-				node.draw = false;
+			if ( node.name === "Floor" ) {
+
+				if ( node.children.length > 0 ) {
+
+					this.floorNode = node;
+					this.floorNode.draw = false;
+
+				} else {
+
+					const ds = node.children[ 0 ];
+					node.draw = false;
+
+					node.name = "InnerGlobeRenderable";
+
+					const orginalProgram = ds.program;
+					ds.program = new UnlitProgram();
+					ds.program.activate();
+					ds.program.transparent = true;
+
+					if ( orginalProgram.textures.length > 0 ) {
+
+						ds.program.activate();
+						ds.program.setTexture( "mapAlbedo", orginalProgram.textures[ 0 ].texture );
+
+					}
+
+
+				}
 
 			}
 
-			if ( node.name === "snow" ) {
+			if ( node.name === "Base" ) {
+
+				if ( node.children.length > 0 ) {
+
+					this.globeBaseNode = node;
+					this.globeBaseNode.draw = false;
+
+				}
+
+			}
+
+			if ( node.name === "Leaves" || node.name === "Leaves1" ) {
+
+				const ds = node.children[ 0 ];
+				node.draw = false;
+
+				node.name = "InnerGlobeRenderable";
+
+				const orginalProgram = ds.program;
+				ds.program = new UnlitProgram();
+				ds.program.activate();
+				ds.program.transparent = true;
+
+				if ( orginalProgram.textures.length > 0 ) {
+
+					ds.program.activate();
+					ds.program.setTexture( "mapAlbedo", orginalProgram.textures[ 0 ].texture );
+
+				}
+
+
+				node.setParent( this.innerGlobeGroup );
+
+
+			}
+
+			if ( node.name === "Snow" ) {
 
 				node.draw = false;
 				node.children[ 0 ].program = this.snowProgram;
@@ -161,7 +260,55 @@ export default class extends Base {
 
 			}
 
-			if ( node.name.includes( "snowGlobe_sphere" ) ) {
+
+			if ( node.name === "Tree" || node.name === "Tree1" ) {
+
+				node.name = "InnerGlobeRenderable";
+
+				if ( node instanceof DrawSet ) {
+
+					const orginalProgram = node.program;
+					node.draw = false;
+					node.program = new UnlitProgram();
+
+					if ( orginalProgram.textures.length > 0 ) {
+
+						node.program.activate();
+						node.program.setTexture( "mapAlbedo", orginalProgram.textures[ 0 ].texture );
+
+					}
+
+				}
+
+				node.setParent( this.innerGlobeGroup );
+
+			}
+
+			if ( node.name === "Rocks" ) {
+
+				const ds = node.children[ 0 ];
+				node.draw = false;
+
+				node.name = "InnerGlobeRenderable";
+
+				const orginalProgram = ds.program;
+				ds.program = new UnlitProgram();
+
+				if ( orginalProgram.textures.length > 0 ) {
+
+					ds.program.activate();
+					ds.program.setTexture( "mapAlbedo", orginalProgram.textures[ 0 ].texture );
+
+				}
+
+
+				node.setParent( this.innerGlobeGroup );
+
+
+			}
+
+
+			if ( node.name.includes( "Glass" ) ) {
 
 				this.globeGlassNode = node;
 				this.globeGlassNode.draw = false;
@@ -176,11 +323,10 @@ export default class extends Base {
 
 		} );
 
-
 		const environmentTexture = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/trees.png" } );
 		await environmentTexture.load();
-		this.background = new Background( { map: environmentTexture } );
 
+		this.background = new Background( { map: environmentTexture } );
 		this.background.transform.position = vec3.fromValues( 0, 0, - 2 );
 
 		const monsterColor = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/monster-color.png" } );
@@ -188,6 +334,8 @@ export default class extends Base {
 
 		const monsterDepth = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/monster-depth.png" } );
 		await monsterDepth.load();
+
+		this.assetsLoaded = true;
 
 		this.monster = new Monster( { map: monsterColor, mapDepth: monsterDepth } );
 
@@ -219,7 +367,7 @@ export default class extends Base {
 
 		this.debugDrawSet = new DrawSet( fullScreenTriangle, debugProgram );
 
-		this.assetsLoaded = true;
+
 
 	}
 
@@ -229,8 +377,6 @@ export default class extends Base {
 
 		this.camera.updateProjection( window.innerWidth / window.innerHeight );
 		this.gBuffer.resize( this.width, this.height );
-		this.gBufferRBO.resize( this.width, this.height );
-		//this.post.resize( this.width, this.height );
 
 	}
 
@@ -252,7 +398,7 @@ export default class extends Base {
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 
-		// render to gbuffer
+		// render to back buffer
 		{
 
 			this.gBuffer.bind();
@@ -264,9 +410,18 @@ export default class extends Base {
 			this.bolt.draw( this.background );
 			this.bolt.enableDepth();
 
+			this.innerGlobeGroup.traverse( ( node: Node ) => {
+
+				if ( node.name !== "InnerGlobeRenderable" ) return;
+
+				node.draw = true;
+				this.bolt.draw( node );
+
+			} );
+
 			this.globeSnowNode.draw = true;
 			this.bolt.draw( this.globeSnowNode );
-			this.globeGlassNode.draw = false;
+			this.globeSnowNode.draw = false;
 
 			this.monster.render();
 
@@ -274,17 +429,21 @@ export default class extends Base {
 
 			this.gBuffer.unbind();
 
+			this.innerGlobeGroup.traverse( ( node: Node ) => {
+
+				if ( node.name !== "InnerGlobeRenderable" ) return;
+
+				node.draw = false;
+
+			} );
+
+
 			this.bolt.clear( 0, 0, 0, 1 );
-			//this.bolt.draw( this.debugDrawSet );
 
 		}
 
 
-
-
-
-		// // draw scenery
-		//this.monster.render();
+		// draw scenery
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 		this.bolt.clear( 0, 0, 0, 1 );
@@ -301,6 +460,14 @@ export default class extends Base {
 		this.globeGlassNode.draw = true;
 		this.bolt.draw( this.globeGlassNode );
 		this.globeGlassNode.draw = false;
+
+		this.globeBaseNode.draw = true;
+		this.bolt.draw( this.globeBaseNode );
+		this.globeBaseNode.draw = false;
+
+		this.floorNode.draw = true;
+		this.bolt.draw( this.floorNode );
+		this.floorNode.draw = false;
 
 
 	}
