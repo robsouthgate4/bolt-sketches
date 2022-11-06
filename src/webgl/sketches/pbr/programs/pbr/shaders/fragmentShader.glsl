@@ -1,13 +1,6 @@
 
 precision highp float;
 
-uniform sampler2D 	mapAO;
-uniform sampler2D 	mapAlbedo;
-uniform sampler2D 	mapRoughness;
-uniform sampler2D 	mapMetallic;
-uniform sampler2D 	mapSpecular;
-uniform sampler2D 	mapNormal;
-
 uniform sampler2D mapEnvironment;
 uniform sampler2D mapIrradiance;
 
@@ -33,11 +26,28 @@ out vec4 FragColor;
 #define PI 3.1415926
 #define TwoPI (2.0 * PI)
 #define LN2 0.6931472
+#define gamma 2.2
+
+float toLinear(float v) {
+  return pow(v, gamma);
+}
+
+vec2 toLinear(vec2 v) {
+  return pow(v, vec2(gamma));
+}
+
+vec3 toLinear(vec3 v) {
+  return pow(v, vec3(gamma));
+}
+
+vec4 toLinear(vec4 v) {
+  return vec4(toLinear(v.rgb), v.a);
+}
 
 #ifdef USE_ROUGHNESS_MAP
-	uniform sampler2D roughness;
+	uniform sampler2D mapRoughness;
 	float getRoughness() {
-		return texture(roughness, Uv).r;
+		return texture(mapRoughness, Uv).r;
 	}
 #else
 	uniform float roughness;
@@ -47,9 +57,9 @@ out vec4 FragColor;
 #endif
 
 #ifdef USE_METALNESS_MAP
-	uniform sampler2D metalness;
+	uniform sampler2D mapMetalness;
 	float getMetalness() {
-		return texture(metalness, Uv).r;
+		return toLinear( texture(mapMetalness, Uv).r );
 	}
 #else
 	uniform float metalness;
@@ -61,12 +71,19 @@ out vec4 FragColor;
 #ifdef USE_ALBEDO_MAP
 	uniform sampler2D mapAlbedo;
 	vec3 getAlbedo() {
-		return texture(mapAlbedo, Uv).rgb;
+		return toLinear( texture(mapAlbedo, Uv).rgb );
 	}
 	#else
 	uniform vec4 albedoColor;
 	vec3 getAlbedo() {
-		return albedoColor.rgb;
+		return toLinear( albedoColor.rgb );
+	}
+#endif
+
+#ifdef USE_AO_MAP
+	uniform sampler2D mapAO;
+	vec3 getAO() {
+		return texture(mapAO, Uv).rgb;
 	}
 #endif
 
@@ -118,33 +135,13 @@ vec3 RGBMDecode( vec4 rgbm ) {
 	return 6.0 * rgbm.rgb * rgbm.a;
 }
 
-vec3 generaterNormal() {
-
-    vec3 posDx = dFdx(WorldPosition.xyz);
-    vec3 posDy = dFdy(WorldPosition.xyz);
-    vec2 textureDx = dFdx(Uv);
-    vec2 textureDy = dFdy(Uv);
-
-    // calculate tangent
-    vec3 t = normalize(posDx * textureDy.t - posDy * textureDx.t);
-    // calculate bi-normal
-    vec3 b = normalize(-posDx * textureDy.s + posDy * textureDx.s);
-    // generate tbn matrix
-    mat3 tbn = mat3(t, b, normalize(WorldNormal));
-
-    vec3 n = texture(mapNormal, Uv * normalUVScale).rgb * 2.0 - 1.0;
-    n.xy *= normalHeight;
-    vec3 normal = normalize(tbn * n);
-
-    return normalize((vec4(normal, 0.0) * view).xyz);
-}
-
 #ifdef USE_NORMAL_MAP
 	uniform sampler2D mapNormal;
 	vec3 getNormal() {
 
 		vec3 posDx = dFdx(WorldPosition.xyz);
 		vec3 posDy = dFdy(WorldPosition.xyz);
+
 		vec2 textureDx = dFdx(Uv);
 		vec2 textureDy = dFdy(Uv);
 
@@ -153,13 +150,14 @@ vec3 generaterNormal() {
 		// calculate bi-normal
 		vec3 b = normalize(-posDx * textureDy.s + posDy * textureDx.s);
 		// generate tbn matrix
-		mat3 tbn = mat3(t, b, normalize(WorldNormal));
+		mat3 tbn = mat3(t, b, normalize(Normal));
 
 		vec3 n = texture(mapNormal, Uv * normalUVScale).rgb * 2.0 - 1.0;
 		n.xy *= normalHeight;
+
 		vec3 normal = normalize(tbn * n);
 
-		return normalize((vec4(normal, 0.0) * view).xyz);
+		return normalize( ( vec4( n, 0.0 ) * view ).xyz);
 	}
 #else
 	vec3 getNormal() {
@@ -179,7 +177,7 @@ vec3 getPbr(vec3 N, vec3 V, vec3 baseColor, float roughness, float metalness, fl
 	// // sample the pre-filtered cubemap at the corresponding mipmap level
 	float numMips		= 6.0;
 
-	vec3 lookup			= -reflect( V, N );
+	vec3 lookup			= normalize( -reflect( V, N ) );
 
 
 	// ibl radiance / irradiance adapted from ogl.js
@@ -228,24 +226,27 @@ void main() {
 
 	vec3 N 				= getNormal();
 	vec3 V 				= normalize( Eye );
-
 	vec3 albedoColor	= getAlbedo();
 
 	float r = getRoughness();
 	float m = getMetalness();
 
+	vec3 color 			= getPbr( N, V, albedoColor, r, m, specular );
 
-	vec3 color 			= getPbr(N, V, albedoColor, r, m, specular );
-	// // specular	vec3 ao 			= texture2D(mapAO, vTextureCoord).rgb;
-	// // 	color 				*= ao;
+	#ifdef USE_AO_MAP
+
+		float ao = texture( mapAO, Uv ).r;
+		color *= ao;
+
+	#endif
 
 	//apply the tone-mapping
-	color				= Uncharted2Tonemap( color * exposure );
+	color				*= exposure;
 	//white balance
-	color				= color * ( 1.0 / Uncharted2Tonemap( vec3( 20.0 ) ) );
+	color				= Uncharted2Tonemap(color);
 
 	//gamma correction
-	color				= pow( color, vec3( 1.0 / 2.2 ) );
+	color				= pow( color, vec3( 1.0 / gamma ) );
 
 	// output the fragment color
 	FragColor		= vec4( color, 1.0 );

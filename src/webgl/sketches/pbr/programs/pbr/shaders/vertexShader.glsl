@@ -27,17 +27,14 @@ out vec3 WorldNormal;
 void main() {
 
 	vec3 position 			= aPosition;
-	vec4 worldSpacePosition	= model * vec4( position, 1.0 );
-	vec4 viewSpacePosition	= view * worldSpacePosition;
+	vec3 worldSpacePosition	= ( model * vec4( position, 1.0 ) ).xyz;
 
 	// get the world space normal
-	Normal						= aNormal;
-	ViewPosition				= viewSpacePosition.xyz;
-	WorldPosition				= worldSpacePosition.xyz;
+	Normal						= ( normal * vec4( aNormal, 0.0 ) ).xyz;
+	WorldPosition				= worldSpacePosition;
 
-	vec4 eyeDirViewSpace	= viewSpacePosition - vec4( 0, 0, 0, 1 );
-	Eye				= normalize( cameraPosition - worldSpacePosition.xyz );
-	WorldNormal				= ( model * vec4( Normal, 0.0 ) ).xyz;
+	Eye				= normalize( cameraPosition - worldSpacePosition);
+	WorldNormal				= ( model * vec4( aNormal, 0.0 ) ).xyz;
 
 	gl_Position				= projection * modelView * vec4( aPosition, 1.0 );
 

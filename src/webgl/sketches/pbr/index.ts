@@ -42,7 +42,7 @@ export default class extends Base {
 	unlitProgram: Program;
 	sphere: DrawSet;
 	irradiance: Texture2D;
-	isoSphere: Node;
+	glbSphere: Node;
 
 
 	constructor() {
@@ -98,10 +98,12 @@ export default class extends Base {
 
 		this.gtlfLoader = new GLTFLoader( this.bolt, false );
 
-		this.isoSphere = await this.gtlfLoader.load( "/static/models/gltf/isoSphere.glb" );
+		this.glbSphere = await this.gtlfLoader.load( "/static/models/gltf/sphere.glb" );
+
+		console.log( this.glbSphere );
 
 		this.environment = new Texture2D( {
-			imagePath: "/static/textures/hdr/snow-specular-RGBM.png",
+			imagePath: "/static/textures/hdr/office-radiance.png",
 			minFilter: LINEAR,
 			magFilter: LINEAR,
 			wrapS: REPEAT,
@@ -111,7 +113,7 @@ export default class extends Base {
 		await this.environment.load();
 
 		this.irradiance = new Texture2D( {
-			imagePath: "/static/textures/hdr/snow-irradiance-RGBM.png",
+			imagePath: "/static/textures/hdr/office-irradiance.png",
 			minFilter: LINEAR,
 			magFilter: LINEAR,
 			wrapS: REPEAT,
@@ -120,12 +122,64 @@ export default class extends Base {
 
 		await this.irradiance.load();
 
-		this.pbrProgram = new PBRProgram( { mapEnvironment: this.environment, mapIrradiance: this.irradiance } );
+		// get roughness map texture2d
+		const roughnessTexture = new Texture2D( {
+			imagePath: "/static/textures/pbr/wood/roughness.jpg",
+			minFilter: LINEAR,
+			magFilter: LINEAR,
+			wrapS: REPEAT,
+			wrapT: REPEAT,
+		} );
+
+		await roughnessTexture.load();
+
+		// get ao map texture2d
+		const aoTexture = new Texture2D( {
+			imagePath: "/static/textures/pbr/wood/ao.jpg",
+			minFilter: LINEAR,
+			magFilter: LINEAR,
+			wrapS: REPEAT,
+			wrapT: REPEAT,
+		} );
+
+		await aoTexture.load();
+
+		// get normal map texture2d
+		const normalTexture = new Texture2D( {
+			imagePath: "/static/textures/pbr/wood/normal.jpg",
+			minFilter: LINEAR,
+			magFilter: LINEAR,
+			wrapS: REPEAT,
+			wrapT: REPEAT,
+		} );
+
+		await normalTexture.load();
+
+		// get color map texture2d
+		const albedoColor = new Texture2D( {
+			imagePath: "/static/textures/pbr/wood/color.jpg",
+			minFilter: LINEAR,
+			magFilter: LINEAR,
+			wrapS: REPEAT,
+			wrapT: REPEAT,
+		} );
+
+		await albedoColor.load();
+
+
+		this.pbrProgram = new PBRProgram(
+			{
+				mapEnvironment: this.environment,
+				mapIrradiance: this.irradiance,
+				mapRoughness: roughnessTexture,
+				mapAO: aoTexture,
+				mapNormal: normalTexture,
+				mapAlbedo: albedoColor,
+			}
+		);
 		this.sphere = new DrawSet( new Mesh( new Sphere( { widthSegments: 128, heightSegments: 128 } ) ), this.pbrProgram );
 
 		this.assetsLoaded = true;
-
-
 
 		this.eventListeners.listen( GL_RESIZE_TOPIC, ( e: any ) => {
 

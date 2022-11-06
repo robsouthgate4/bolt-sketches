@@ -4,7 +4,7 @@ import vertexShader from "./shaders/vertexShader.glsl";
 import fragmentShader from "./shaders/fragmentShader.glsl";
 import EventListeners from "@/webgl/modules/event-listeners";
 import { GL_UPDATE_TOPIC } from "@/webgl/modules/event-listeners/constants";
-import { vec3, vec4 } from "gl-matrix";
+import { vec2, vec3, vec4 } from "gl-matrix";
 export default class PBRProgram extends Program {
 
 	bolt = Bolt.getInstance();
@@ -24,12 +24,12 @@ export default class PBRProgram extends Program {
 
 		const flags = [];
 
-
 		flags.push( "#version 300 es" );
-		// flags.push( '#define USE_ALBEDO_MAP' );
-		// flags.push( '#define USE_ROUGHNESS_MAP' );
-		// flags.push( '#define USE_METALNESS_MAP' );
-		// flags.push( '#define USE_NORMAL_MAP' );
+		flags.push( '#define USE_ALBEDO_MAP' );
+		flags.push( '#define USE_ROUGHNESS_MAP' );
+		flags.push( '#define USE_AO_MAP' );
+		//flags.push( '#define USE_METALNESS_MAP' );
+		flags.push( '#define USE_NORMAL_MAP' );
 
 		const definesString = flags.join( '\n' ) + '\n';
 
@@ -38,12 +38,19 @@ export default class PBRProgram extends Program {
 
 		this.activate();
 
-		this.setFloat( "roughness", 0.0 );
-		this.setFloat( "metalness", 0.0 );
-		this.setFloat( "specular", 0.0 );
-		this.setFloat( "exposure", 1.0 );
+		this.setTexture( "mapAlbedo", mapAlbedo );
+		this.setTexture( "mapRoughness", mapRoughness );
+		this.setTexture( "mapNormal", mapNormal );
+		this.setTexture( "mapAO", mapAO );
 
-		this.setVector4( "albedoColor", vec4.fromValues( 1.0, 0.0, 0.0, 1.0 ) );
+		this.setFloat( "metalness", 0.0 );
+		this.setFloat( "roughness", 0.0 );
+		this.setFloat( "specular", 1 );
+		this.setFloat( "exposure", 1 );
+		this.setFloat( "normalHeight", 0.5 );
+
+		this.setVector4( "albedoColor", vec4.fromValues( 1, 0, 0, 1 ) );
+		this.setVector2( "normalUVScale", vec2.fromValues( 1.0, 1.0 ) );
 
 		this.setTexture( "mapEnvironment", mapEnvironment );
 		this.setTexture( "mapIrradiance", mapIrradiance );
