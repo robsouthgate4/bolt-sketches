@@ -197,7 +197,7 @@ export default class extends Base {
 					const ds = node.children[ 0 ];
 					node.draw = false;
 
-					node.name = "InnerGlobeRenderable";
+					node.name = "InnerGlobeRenderable" + node.name;
 
 					const orginalProgram = ds.program;
 					ds.program = new UnlitProgram();
@@ -230,9 +230,7 @@ export default class extends Base {
 			if ( node.name === "Leaves" || node.name === "Leaves1" ) {
 
 				const ds = node.children[ 0 ];
-				node.draw = false;
-
-				node.name = "InnerGlobeRenderable";
+				//node.draw = false;
 
 				const orginalProgram = ds.program;
 				ds.program = new UnlitProgram();
@@ -246,7 +244,7 @@ export default class extends Base {
 
 				}
 
-
+				node.name = "InnerGlobeRenderable" + node.name;
 				node.setParent( this.innerGlobeGroup );
 
 
@@ -263,12 +261,10 @@ export default class extends Base {
 
 			if ( node.name === "Tree" || node.name === "Tree1" ) {
 
-				node.name = "InnerGlobeRenderable";
-
 				if ( node instanceof DrawSet ) {
 
 					const orginalProgram = node.program;
-					node.draw = false;
+					//node.draw = false;
 					node.program = new UnlitProgram();
 
 					if ( orginalProgram.textures.length > 0 ) {
@@ -280,7 +276,15 @@ export default class extends Base {
 
 				}
 
-				node.setParent( this.innerGlobeGroup );
+				if ( node.children.length > 0 ) {
+
+					node.name = "InnerGlobeRenderable" + node.name;
+					node.setParent( this.innerGlobeGroup );
+
+					node.draw = false;
+
+				}
+
 
 			}
 
@@ -289,7 +293,7 @@ export default class extends Base {
 				const ds = node.children[ 0 ];
 				node.draw = false;
 
-				node.name = "InnerGlobeRenderable";
+				node.name = "InnerGlobeRenderable" + node.name;
 
 				const orginalProgram = ds.program;
 				ds.program = new UnlitProgram();
@@ -321,7 +325,10 @@ export default class extends Base {
 
 			}
 
+
 		} );
+
+		console.log( this.innerGlobeGroup );
 
 		const environmentTexture = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/trees.png" } );
 		await environmentTexture.load();
@@ -335,7 +342,7 @@ export default class extends Base {
 		const monsterDepth = new Texture2D( { imagePath: "/static/textures/sketches/snow-globe/monster-depth.png" } );
 		await monsterDepth.load();
 
-		this.assetsLoaded = true;
+
 
 		this.monster = new Monster( { map: monsterColor, mapDepth: monsterDepth } );
 
@@ -367,6 +374,7 @@ export default class extends Base {
 
 		this.debugDrawSet = new DrawSet( fullScreenTriangle, debugProgram );
 
+		this.assetsLoaded = true;
 
 
 	}
@@ -392,10 +400,6 @@ export default class extends Base {
 
 		this.orbit.update();
 
-		this.debugDrawSet.program.activate();
-		this.debugDrawSet.program.setTexture( "mapNormal", this.normalTexture );
-		this.debugDrawSet.program.setTexture( "map", this.sceneTexture );
-
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 
 		// render to back buffer
@@ -412,7 +416,7 @@ export default class extends Base {
 
 			this.innerGlobeGroup.traverse( ( node: Node ) => {
 
-				if ( node.name !== "InnerGlobeRenderable" ) return;
+				if ( ! node.name.includes( "InnerGlobeRenderable" ) ) return;
 
 				node.draw = true;
 				this.bolt.draw( node );
@@ -431,8 +435,7 @@ export default class extends Base {
 
 			this.innerGlobeGroup.traverse( ( node: Node ) => {
 
-				if ( node.name !== "InnerGlobeRenderable" ) return;
-
+				if ( ! node.name.includes( "InnerGlobeRenderable" ) ) return;
 				node.draw = false;
 
 			} );
@@ -468,6 +471,8 @@ export default class extends Base {
 		this.floorNode.draw = true;
 		this.bolt.draw( this.floorNode );
 		this.floorNode.draw = false;
+
+		//this.bolt.draw( this.debugDrawSet );
 
 
 	}
