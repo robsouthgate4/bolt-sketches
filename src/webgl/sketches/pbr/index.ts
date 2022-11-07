@@ -42,7 +42,7 @@ export default class extends Base {
 	unlitProgram: Program;
 	sphere: DrawSet;
 	irradiance: Texture2D;
-	glbSphere: Node;
+	glb: Node;
 
 
 	constructor() {
@@ -76,8 +76,8 @@ export default class extends Base {
 			fov: 45,
 			near: 0.1,
 			far: 1000,
-			position: vec3.fromValues( 0, 0, 5 ),
-			target: vec3.fromValues( 0, 0, 0 ),
+			position: vec3.fromValues( 0, 2, 5 ),
+			target: vec3.fromValues( 0, 1, 0 ),
 		} );
 
 		this.orbit = new Orbit( this.camera, {
@@ -98,9 +98,11 @@ export default class extends Base {
 
 		this.gtlfLoader = new GLTFLoader( this.bolt, false );
 
-		this.glbSphere = await this.gtlfLoader.load( "/static/models/gltf/sphere.glb" );
+		this.glb = await this.gtlfLoader.load( "/static/models/gltf/shaderBall.glb" );
 
-		console.log( this.glbSphere );
+		this.glb.transform.scale = vec3.fromValues( 2.0, 2.0, 2.0 );
+
+		console.log( this.glb );
 
 		this.environment = new Texture2D( {
 			imagePath: "/static/textures/hdr/office-radiance.png",
@@ -177,6 +179,20 @@ export default class extends Base {
 				mapAlbedo: albedoColor,
 			}
 		);
+
+
+		//this.glb.children[ 0 ].children[ 1 ].draw = false;
+
+		this.glb.traverse( ( node ) => {
+
+			if ( node instanceof DrawSet ) {
+
+				node.program = this.pbrProgram;
+
+			}
+
+		} );
+
 		this.sphere = new DrawSet( new Mesh( new Sphere( { widthSegments: 128, heightSegments: 128 } ) ), this.pbrProgram );
 
 		this.assetsLoaded = true;
@@ -218,7 +234,7 @@ export default class extends Base {
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
 		this.bolt.clear( 0, 0, 0, 1 );
-		this.bolt.draw( this.sphere );
+		this.bolt.draw( this.glb );
 
 
 

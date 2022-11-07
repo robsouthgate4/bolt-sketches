@@ -288,7 +288,7 @@ export default class Mesh {
 		normalVbo.unbind();
 		uvVbo.unbind();
 
-		this._storeFaces();
+		//this._storeFaces();
 
 	}
 

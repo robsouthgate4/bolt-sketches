@@ -43,10 +43,6 @@ export default class extends Base {
 	background: Background;
 	gBuffer: FBO;
 	normalTexture: Texture2D;
-	depthTexture: Texture2D;
-	uvTexture: Texture2D;
-	gBufferRBO: any;
-	gBufferProgram: Program;
 	sceneTexture: Texture2D;
 	debugTriangle: CopyPass;
 	debugProgram: Program;
@@ -61,7 +57,7 @@ export default class extends Base {
 	snowProgram: SnowProgram;
 	innerGlobeGroup: Node;
 	unlitProgram: Program;
-	tree1node: Node;
+
 
 	constructor() {
 
@@ -178,8 +174,6 @@ export default class extends Base {
 		this.globeProgram = new GlobeProgram( { mapEnv: this.environmentHDRI } );
 		this.snowProgram = new SnowProgram( { mapEnv: this.environmentHDRI } );
 		this.unlitProgram = new UnlitProgram();
-
-		this.tree1node = new Node();
 		this.innerGlobeGroup = new Node();
 
 		this.snowGlobeGLTF.traverse( ( node ) => {

@@ -20,7 +20,7 @@ out vec2 Uv;
 out vec3 Normal;
 out vec3 ViewPosition;
 out vec3 WorldPosition;
-out vec3 EyePosition;
+out vec3 Eye;
 out vec3 WorldNormal;
 
 
@@ -36,7 +36,7 @@ void main() {
 	WorldPosition				= worldSpacePosition.xyz;
 
 	vec4 eyeDirViewSpace	= viewSpacePosition - vec4( 0, 0, 0, 1 );
-	EyePosition				= cameraPosition;
+	Eye				= normalize( cameraPosition - worldSpacePosition.xyz );
 	WorldNormal				= ( model * vec4( Normal, 0.0 ) ).xyz;
 
     gl_Position				= projection * modelView * vec4( aPosition, 1.0 );

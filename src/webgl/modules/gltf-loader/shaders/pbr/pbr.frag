@@ -102,7 +102,7 @@ vec3 getPbr(vec3 N, vec3 V, vec3 baseColor, float roughness, float metallic, flo
 void main() {
 
 vec3 N 				= normalize( WorldNormal );
-vec3 V 				= normalize( EyePosition );
+vec3 V 				= normalize( Eye );
 
 vec3 baseColor		= vec3(1.0, 0.0, 0.0);
 

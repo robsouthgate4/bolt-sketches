@@ -8,6 +8,7 @@ import Node from "./Node";
 import { BACK, BLEND, CULL_FACE, DEPTH_TEST, NONE, ONE, ONE_MINUS_SRC_ALPHA, SRC_ALPHA } from "./Constants";
 import { vec2, vec3 } from "gl-matrix";
 import { BoltParams, Viewport } from "./Types";
+import Program from "./Program";
 
 export default class Bolt {
 
@@ -20,6 +21,8 @@ export default class Bolt {
 	private _sortVec3 = vec3.create();
 	private _transparentNodes: DrawSet[] = [];
 	private _opaqueNodes: DrawSet[] = [];
+	private _activePrograms: Program[] = [];
+	private _activeProgram!: Program;
 
 	static getInstance(): Bolt {
 
@@ -274,8 +277,10 @@ export default class Bolt {
 		this._camera.update();
 
 		let textureUnit = 0;
+		this._activePrograms = [];
 
 		const render = ( node: Node ) => {
+
 
 			if ( node.parent && ! node.parent.draw ) return;
 
@@ -289,17 +294,22 @@ export default class Bolt {
 
 				const { program } = node;
 
-				if ( program.textures && program.textures.length > 0 ) {
+				if ( program !== this._activeProgram ) {
 
-					for ( let i = 0; i < program.textures.length; i ++ ) {
+					if ( program.textures && program.textures.length > 0 ) {
 
-						textureUnit ++;
+						for ( let i = 0; i < program.textures.length; i ++ ) {
 
-						const textureObject = program.textures[ i ];
+							textureUnit ++;
 
-						textureObject.texture.textureUnit( program, textureObject.uniformName, textureUnit );
+							const textureObject = program.textures[ i ];
+
+							textureObject.texture.textureUnit( program, textureObject.uniformName, textureUnit );
+
+						}
 
 					}
+
 
 				}
 
@@ -335,6 +345,8 @@ export default class Bolt {
 
 				}
 
+				this._activeProgram = program;
+
 			}
 
 		};
@@ -352,6 +364,8 @@ export default class Bolt {
 				drawables.updateModelMatrix();
 
 				if ( node instanceof DrawSet ) {
+
+					this._activePrograms.push( node.program );
 
 					if ( node.program.transparent ) {
 

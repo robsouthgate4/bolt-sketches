@@ -66,8 +66,8 @@ export default class GLTFLoader {
 
 	constructor( bolt: Bolt, flattenHierarchy = false, environmentMaps?: { irradianceMap: TextureCube, radianceMap: TextureCube } ) {
 
-		this._irradianceMap = environmentMaps.irradianceMap || undefined;
-		this._radianceMap = environmentMaps.radianceMap || undefined;
+		// this._irradianceMap = environmentMaps.irradianceMap || undefined;
+		// this._radianceMap = environmentMaps.radianceMap || undefined;
 
 		this._bolt = bolt;
 		this._flattenHierarchy = flattenHierarchy;
@@ -320,14 +320,16 @@ export default class GLTFLoader {
 				const uvs2 = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "TEXCOORD_1" ) || undefined;
 				const normals = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "NORMAL" ) || undefined;
 				const indices = this._getBufferFromFile( gltf, buffers, indexAccesor ) || undefined;
+				const positions = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "POSITION" ) || undefined;
+
 
 				// form bolt default geo buffers
 				const geometry: GeometryBuffers = {
 					// every geometry should have position data by default
-					positions: this._getBufferByAttribute( gltf, buffers, mesh, primitive, "POSITION" )!.data as Float32Array,
+					positions: positions.data as Float32Array,
 					normals: normals ? normals!.data as Float32Array : undefined,
 					uvs: uvs ? uvs!.data as Float32Array : undefined,
-					uvs2: uvs ? uvs!.data as Float32Array : undefined,
+					uvs2: uvs2 ? uvs2!.data as Float32Array : undefined,
 					indices: indices ? indices!.data as Int16Array : undefined
 				};
 

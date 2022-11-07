@@ -25,11 +25,11 @@ export default class PBRProgram extends Program {
 		const flags = [];
 
 		flags.push( "#version 300 es" );
-		flags.push( '#define USE_ALBEDO_MAP' );
-		flags.push( '#define USE_ROUGHNESS_MAP' );
-		flags.push( '#define USE_AO_MAP' );
+		//flags.push( '#define USE_ALBEDO_MAP' );
+		//flags.push( '#define USE_ROUGHNESS_MAP' );
+		//flags.push( '#define USE_AO_MAP' );
 		//flags.push( '#define USE_METALNESS_MAP' );
-		flags.push( '#define USE_NORMAL_MAP' );
+		//flags.push( '#define USE_NORMAL_MAP' );
 
 		const definesString = flags.join( '\n' ) + '\n';
 
@@ -44,7 +44,7 @@ export default class PBRProgram extends Program {
 		this.setTexture( "mapAO", mapAO );
 
 		this.setFloat( "metalness", 0.0 );
-		this.setFloat( "roughness", 0.0 );
+		this.setFloat( "roughness", 0.5 );
 		this.setFloat( "specular", 1 );
 		this.setFloat( "exposure", 1 );
 		this.setFloat( "normalHeight", 0.5 );
