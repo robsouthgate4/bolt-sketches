@@ -43,7 +43,7 @@ export default class PBRProgram extends Program {
 		this.setTexture( "mapNormal", mapNormal );
 		this.setTexture( "mapAO", mapAO );
 
-		this.setFloat( "metalness", 0.0 );
+		this.setFloat( "metalness", 1.0 );
 		this.setFloat( "roughness", 0.5 );
 		this.setFloat( "specular", 1 );
 		this.setFloat( "exposure", 1 );

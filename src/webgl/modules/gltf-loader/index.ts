@@ -420,7 +420,6 @@ export default class GLTFLoader {
 
 			program.activate();
 
-
 			//program.setTexture( "mapAlbedo", new Texture2D() );
 			// program.setTexture( "mapRadiance", this._radianceMap );
 			// program.setTexture( "mapIrradiance", this._irradianceMap );

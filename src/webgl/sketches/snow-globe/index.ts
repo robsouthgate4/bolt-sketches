@@ -387,7 +387,6 @@ export default class extends Base {
 		this.orbit.update();
 
 		this.debugDrawSet.program.activate();
-		this.debugDrawSet.program.setTexture( "mapNormal", this.normalTexture );
 		this.debugDrawSet.program.setTexture( "map", this.sceneTexture );
 
 		this.bolt.setViewPort( 0, 0, this.canvas.width, this.canvas.height );
