@@ -1,4 +1,4 @@
-import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform, GeometryBuffers, TextureCube, Texture, NEAREST, BACK } from "@/webgl/libs/bolt";
+import Bolt, { DrawSet, CLAMP_TO_EDGE, FLOAT, LINEAR, Mesh, Node, Program, Texture2D, Transform, GeometryBuffers, TextureCube, BACK, BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT } from "@/webgl/libs/bolt";
 import { mat4, quat, vec3, vec4 } from "gl-matrix";
 import { Accessor, GlTf, Material, Mesh as GLTFMesh, MeshPrimitive, Node as GLTFNode, Texture as GLTFTexture, Skin as GLTFSkin, BufferView, Animation as GLTFAnimation } from "./types/gltf";
 import { TypedArray } from "./types/typedArray";
@@ -12,6 +12,7 @@ import skinFragmentShader from "./shaders/skin/skin.frag";
 import Skin from "./Skin";
 import SkinMesh from "./SkinMesh";
 import { Animation, Channel } from "./types/animation";
+import { DracoDecoder } from "../draco-decoder";
 
 enum BufferType {
 	Float = 5126,
@@ -91,6 +92,15 @@ export default class GLTFLoader {
 			this._json = await fetch( url )
 				.then( ( res ) => res.arrayBuffer() )
 				.then( ( glb ) => this._decodeGLB( glb ) );
+
+		}
+
+		if ( this._json.extensionsRequired && this._json.extensionsRequired.includes( 'KHR_draco_mesh_compression' ) ) {
+
+			console.log( "draco compression detected" );
+
+			const decoder = new DracoDecoder();
+			await decoder.ready();
 
 		}
 
@@ -240,6 +250,8 @@ export default class GLTFLoader {
 
 		} );
 
+
+
 		return this._root;
 
 
@@ -311,62 +323,315 @@ export default class GLTFLoader {
 
 		return mesh.primitives.map( ( primitive ) => {
 
-			if ( primitive.indices !== undefined ) {
+			if ( primitive.extensions && primitive.extensions.KHR_draco_mesh_compression ) {
 
-				// get index accessor
-				const indexAccesor = gltf.accessors![ primitive.indices! ];
+				const dracoExtension = primitive.extensions.KHR_draco_mesh_compression;
 
-				const uvs = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "TEXCOORD_0" ) || undefined;
-				const uvs2 = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "TEXCOORD_1" ) || undefined;
-				const normals = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "NORMAL" ) || undefined;
-				const indices = this._getBufferFromFile( gltf, buffers, indexAccesor ) || undefined;
-				const positions = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "POSITION" ) || undefined;
+				const dracoDecoder = new DracoDecoder();
 
+				if ( dracoDecoder !== undefined && Object.isFrozen( dracoDecoder ) ) {
 
-				// form bolt default geo buffers
-				const geometry: GeometryBuffers = {
-					// every geometry should have position data by default
-					positions: positions.data as Float32Array,
-					normals: normals ? normals!.data as Float32Array : undefined,
-					uvs: uvs ? uvs!.data as Float32Array : undefined,
-					uvs2: uvs2 ? uvs2!.data as Float32Array : undefined,
-					indices: indices ? indices!.data as Int16Array : undefined
-				};
+					let dracoBufferViewIDX = dracoExtension.bufferView;
 
-				// get joints from buffer
-				const joints = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "JOINTS_0" ) || undefined;
+					const origGltfDrBufViewObj = gltf.bufferViews[ dracoBufferViewIDX ];
+					const origGltfDracoBuffer = gltf.buffers[ origGltfDrBufViewObj.buffer ];
 
-				// get weights from buffer
-				const weights = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "WEIGHTS_0" ) || undefined;
+					const totalBuffer = new Int8Array( origGltfDracoBuffer.binary );
 
-				let m: Mesh | SkinMesh;
-				let s: Program;
+					const actualBuffer = totalBuffer.slice( origGltfDrBufViewObj.byteOffset,
+						origGltfDrBufViewObj.byteOffset + origGltfDrBufViewObj.byteLength );
 
-				s = ( this._materials && primitive.material !== undefined ) ? this._materials[ primitive.material as number ] : new Program( vertexShader, fragmentShader );
+					// decode draco buffer to geometry intermediate
+					const dracoDecoder = new DracoDecoder();
+					const draco = dracoDecoder.module;
 
-				if ( node && node.skin !== undefined ) {
+					const decoder = new draco.Decoder();
+					const decoderBuffer = new draco.DecoderBuffer();
+					decoderBuffer.Init( actualBuffer, origGltfDrBufViewObj.byteLength );
 
-					// form skinned mesh data if joints defined
-					m = new SkinMesh( geometry );
-					m.setAttribute( Float32Array.from( joints!.data ), joints!.size, { program: s, attributeName: "aJoints" } );
-					m.setAttribute( weights!.data, weights!.size, { program: s, attributeName: "aWeights" }, FLOAT );
+					let dracoGeometry = this._decodeGeometry( draco, decoder, decoderBuffer, dracoExtension.attributes, gltf, primitive );
 
-				} else {
+					console.log( dracoGeometry );
+
+					draco.destroy( decoderBuffer );
+
+					//TODO: add support for skinned meshes
+
+					const geometry: GeometryBuffers = {
+						//@ts-ignore
+						positions: dracoGeometry.attributes.POSITION.array as Float32Array,
+						//@ts-ignore
+						normals: dracoGeometry.attributes.NORMAL ? dracoGeometry.attributes.NORMAL!.array as Float32Array : undefined,
+						//@ts-ignore
+						uvs: dracoGeometry.attributes.TEXCOORD_0 ? dracoGeometry.attributes.TEXCOORD_0!.array as Float32Array : undefined,
+						//@ts-ignore
+						uvs2: dracoGeometry.attributes.TEXCOORD_1 ? dracoGeometry.attributes.TEXCOORD_1!.array as Float32Array : undefined,
+						indices: dracoGeometry.index ? dracoGeometry.index.array as Uint16Array : undefined
+					};
+
+					let m: Mesh | SkinMesh;
+					let s: Program;
+
+					s = ( this._materials && primitive.material !== undefined ) ? this._materials[ primitive.material as number ] : new Program( vertexShader, fragmentShader );
 
 					m = new Mesh( geometry );
 
+					const ds = new DrawSet( m, s );
+					ds.name = mesh.name;
+
+					this._drawSetsFlattened.push( ds );
+
+					return ds;
+
 				}
 
-				const ds = new DrawSet( m, s );
-				ds.name = mesh.name;
+			} else {
 
-				this._drawSetsFlattened.push( ds );
+				if ( primitive.indices !== undefined ) {
 
-				return ds;
+					// get index accessor
+					const indexAccesor = gltf.accessors![ primitive.indices! ];
+
+					const uvs = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "TEXCOORD_0" ) || undefined;
+					const uvs2 = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "TEXCOORD_1" ) || undefined;
+					const normals = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "NORMAL" ) || undefined;
+					const indices = this._getBufferFromFile( gltf, buffers, indexAccesor ) || undefined;
+					const positions = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "POSITION" ) || undefined;
+
+					// form bolt default geo buffers
+					const geometry: GeometryBuffers = {
+						// every geometry should have position data by default
+						positions: positions.data as Float32Array,
+						normals: normals ? normals!.data as Float32Array : undefined,
+						uvs: uvs ? uvs!.data as Float32Array : undefined,
+						uvs2: uvs2 ? uvs2!.data as Float32Array : undefined,
+						indices: indices ? indices!.data as Int16Array : undefined
+					};
+
+					// get joints from buffer
+					const joints = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "JOINTS_0" ) || undefined;
+
+					// get weights from buffer
+					const weights = this._getBufferByAttribute( gltf, buffers, mesh, primitive, "WEIGHTS_0" ) || undefined;
+
+					let m: Mesh | SkinMesh;
+					let s: Program;
+
+					s = ( this._materials && primitive.material !== undefined ) ? this._materials[ primitive.material as number ] : new Program( vertexShader, fragmentShader );
+
+					if ( node && node.skin !== undefined ) {
+
+						// form skinned mesh data if joints defined
+						m = new SkinMesh( geometry );
+						m.setAttribute( Float32Array.from( joints!.data ), joints!.size, { program: s, attributeName: "aJoints" } );
+						m.setAttribute( weights!.data, weights!.size, { program: s, attributeName: "aWeights" }, FLOAT );
+
+					} else {
+
+						m = new Mesh( geometry );
+
+					}
+
+					const ds = new DrawSet( m, s );
+					ds.name = mesh.name;
+
+					this._drawSetsFlattened.push( ds );
+
+					return ds;
+
+				}
 
 			}
 
 		} );
+
+	}
+
+	_decodeGeometry( draco, decoder, decoderBuffer, gltfDracoAttributes, gltf, primitive ) {
+
+		let dracoGeometry;
+		let decodingStatus;
+
+		// decode mesh in draco decoder
+		let geometryType = decoder.GetEncodedGeometryType( decoderBuffer );
+		if ( geometryType === draco.TRIANGULAR_MESH ) {
+
+			dracoGeometry = new draco.Mesh();
+			decodingStatus = decoder.DecodeBufferToMesh( decoderBuffer, dracoGeometry );
+
+		} else {
+
+			throw new Error( 'DRACOLoader: Unexpected geometry type.' );
+
+		}
+
+		if ( ! decodingStatus.ok() || dracoGeometry.ptr === 0 ) {
+
+			throw new Error( 'DRACOLoader: Decoding failed: ' + decodingStatus.error_msg() );
+
+		}
+
+		let geometry = { index: null, attributes: {} };
+		let vertexCount = dracoGeometry.num_points();
+
+		// Gather all vertex attributes.
+		for ( let dracoAttr in gltfDracoAttributes ) {
+
+			let componentType = "Int8Array"; // defualt
+			let accessorVertexCount;
+
+			// find gltf accessor for this draco attribute
+			for ( const [ key, value ] of Object.entries( primitive.attributes ) ) {
+
+				if ( key === dracoAttr ) {
+
+					componentType = gltf.accessors[ value as number ].componentType;
+					accessorVertexCount = gltf.accessors[ value as number ].count;
+					break;
+
+				}
+
+			}
+
+			// check if vertex count matches
+			if ( vertexCount !== accessorVertexCount ) {
+
+				throw new Error( `DRACOLoader: Accessor vertex count ${accessorVertexCount} does not match draco decoder vertex count  ${vertexCount}` );
+
+			}
+
+			componentType = this._getDracoArrayTypeFromComponentType( componentType );
+
+			let dracoAttribute = decoder.GetAttributeByUniqueId( dracoGeometry, gltfDracoAttributes[ dracoAttr ] );
+			var tmpObj = this._decodeAttribute( draco, decoder,
+				dracoGeometry, dracoAttr, dracoAttribute, componentType );
+			geometry.attributes[ tmpObj.name ] = tmpObj;
+
+		}
+
+		// Add index buffer
+		if ( geometryType === draco.TRIANGULAR_MESH ) {
+
+			// Generate mesh faces.
+			let numFaces = dracoGeometry.num_faces();
+			let numIndices = numFaces * 3;
+			let dataSize = numIndices * 4;
+			let ptr = draco._malloc( dataSize );
+			decoder.GetTrianglesUInt32Array( dracoGeometry, dataSize, ptr );
+			let index = new Uint32Array( draco.HEAPU32.buffer, ptr, numIndices ).slice();
+			draco._free( ptr );
+
+			geometry.index = { array: index, itemSize: 1 };
+
+		}
+
+		draco.destroy( dracoGeometry );
+		return geometry;
+
+	}
+
+	_getDracoArrayTypeFromComponentType( componentType ): string {
+
+		switch ( componentType ) {
+
+			case BYTE:
+				return "Int8Array";
+			case UNSIGNED_BYTE:
+				return "Uint8Array";
+			case SHORT:
+				return "Int16Array";
+			case UNSIGNED_SHORT:
+				return "Uint16Array";
+			case INT:
+				return "Int32Array";
+			case UNSIGNED_INT:
+				return "Uint32Array";
+			case FLOAT:
+				return "Float32Array";
+			default:
+				return "Float32Array";
+
+		}
+
+	}
+
+	_decodeAttribute( draco, decoder, dracoGeometry, attributeName, attribute, attributeType ) {
+
+		let numComponents = attribute.num_components();
+		let numPoints = dracoGeometry.num_points();
+		let numValues = numPoints * numComponents;
+
+		let ptr;
+		let array;
+
+		let dataSize;
+		switch ( attributeType ) {
+
+			case "Float32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_FLOAT32, dataSize, ptr );
+				array = new Float32Array( draco.HEAPF32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int8Array":
+				ptr = draco._malloc( numValues );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT8, numValues, ptr );
+				array = new Int8Array( draco.HEAP8.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int16Array":
+				dataSize = numValues * 2;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT16, dataSize, ptr );
+				array = new Int16Array( draco.HEAP16.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT32, dataSize, ptr );
+				array = new Int32Array( draco.HEAP32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint8Array":
+				ptr = draco._malloc( numValues );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT8, numValues, ptr );
+				array = new Uint8Array( draco.HEAPU8.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint16Array":
+				dataSize = numValues * 2;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT16, dataSize, ptr );
+				array = new Uint16Array( draco.HEAPU16.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT32, dataSize, ptr );
+				array = new Uint32Array( draco.HEAPU32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			default:
+				throw new Error( 'DRACOLoader: Unexpected attribute type.' );
+
+		}
+
+		return {
+			name: attributeName,
+			array: array,
+			itemSize: numComponents,
+			componentType: attributeType
+		};
 
 	}
 
@@ -515,6 +780,7 @@ export default class GLTFLoader {
 
 		const dir = path.split( '/' ).slice( 0, - 1 ).join( '/' );
 		const response = await fetch( `${dir}/${buffer.uri}` );
+
 		return await response.arrayBuffer();
 
 	}
@@ -525,14 +791,17 @@ export default class GLTFLoader {
 
 		const type = accessor.type;
 
-		// size of the data set
+		// size of each component in the buffer
 		const size = this._accessorSize[ type ];
 
 		// component type as number
 		const componentType = accessor.componentType;
 
 		// get the array buffer type from map and fetch relevant data
-		const data = new this._typedArrayMap[ componentType ]( buffers[ bufferView.buffer ], ( accessor.byteOffset || 0 ) + ( bufferView.byteOffset || 0 ), accessor.count * size ) as ArrayBuffer;
+		const data = new this._typedArrayMap[
+			componentType ]( buffers[ bufferView.buffer ],
+			( accessor.byteOffset || 0 ) + ( bufferView.byteOffset || 0 ),
+			accessor.count * size ) as ArrayBuffer;
 
 		return {
 			size,
@@ -546,7 +815,9 @@ export default class GLTFLoader {
 	_getBufferByAttribute( gltf: GlTf, buffers: ArrayBuffer[], mesh: GLTFMesh, primitive: MeshPrimitive, attributeName: string ) {
 
 		if ( primitive.attributes[ attributeName ] === undefined ) return;
+
 		const accessor = this._getAccessor( gltf, mesh, primitive, attributeName );
+
 		const bufferData = this._getBufferFromFile( gltf, buffers, accessor );
 		return bufferData;
 
