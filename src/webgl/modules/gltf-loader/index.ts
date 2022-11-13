@@ -447,194 +447,6 @@ export default class GLTFLoader {
 
 	}
 
-	_decodeGeometry( draco, decoder, decoderBuffer, gltfDracoAttributes, gltf, primitive ) {
-
-		let dracoGeometry;
-		let decodingStatus;
-
-		// decode mesh in draco decoder
-		let geometryType = decoder.GetEncodedGeometryType( decoderBuffer );
-		if ( geometryType === draco.TRIANGULAR_MESH ) {
-
-			dracoGeometry = new draco.Mesh();
-			decodingStatus = decoder.DecodeBufferToMesh( decoderBuffer, dracoGeometry );
-
-		} else {
-
-			throw new Error( 'DRACOLoader: Unexpected geometry type.' );
-
-		}
-
-		if ( ! decodingStatus.ok() || dracoGeometry.ptr === 0 ) {
-
-			throw new Error( 'DRACOLoader: Decoding failed: ' + decodingStatus.error_msg() );
-
-		}
-
-		let geometry = { index: null, attributes: {} };
-		let vertexCount = dracoGeometry.num_points();
-
-		// Gather all vertex attributes.
-		for ( let dracoAttr in gltfDracoAttributes ) {
-
-			let componentType = "Int8Array"; // defualt
-			let accessorVertexCount;
-
-			// find gltf accessor for this draco attribute
-			for ( const [ key, value ] of Object.entries( primitive.attributes ) ) {
-
-				if ( key === dracoAttr ) {
-
-					componentType = gltf.accessors[ value as number ].componentType;
-					accessorVertexCount = gltf.accessors[ value as number ].count;
-					break;
-
-				}
-
-			}
-
-			// check if vertex count matches
-			if ( vertexCount !== accessorVertexCount ) {
-
-				throw new Error( `DRACOLoader: Accessor vertex count ${accessorVertexCount} does not match draco decoder vertex count  ${vertexCount}` );
-
-			}
-
-			componentType = this._getDracoArrayTypeFromComponentType( componentType );
-
-			let dracoAttribute = decoder.GetAttributeByUniqueId( dracoGeometry, gltfDracoAttributes[ dracoAttr ] );
-			var tmpObj = this._decodeAttribute( draco, decoder,
-				dracoGeometry, dracoAttr, dracoAttribute, componentType );
-			geometry.attributes[ tmpObj.name ] = tmpObj;
-
-		}
-
-		// Add index buffer
-		if ( geometryType === draco.TRIANGULAR_MESH ) {
-
-			// Generate mesh faces.
-			let numFaces = dracoGeometry.num_faces();
-			let numIndices = numFaces * 3;
-			let dataSize = numIndices * 4;
-			let ptr = draco._malloc( dataSize );
-			decoder.GetTrianglesUInt32Array( dracoGeometry, dataSize, ptr );
-			let index = new Uint32Array( draco.HEAPU32.buffer, ptr, numIndices ).slice();
-			draco._free( ptr );
-
-			geometry.index = { array: index, itemSize: 1 };
-
-		}
-
-		draco.destroy( dracoGeometry );
-		return geometry;
-
-	}
-
-	_getDracoArrayTypeFromComponentType( componentType ): string {
-
-		switch ( componentType ) {
-
-			case BYTE:
-				return "Int8Array";
-			case UNSIGNED_BYTE:
-				return "Uint8Array";
-			case SHORT:
-				return "Int16Array";
-			case UNSIGNED_SHORT:
-				return "Uint16Array";
-			case INT:
-				return "Int32Array";
-			case UNSIGNED_INT:
-				return "Uint32Array";
-			case FLOAT:
-				return "Float32Array";
-			default:
-				return "Float32Array";
-
-		}
-
-	}
-
-	_decodeAttribute( draco, decoder, dracoGeometry, attributeName, attribute, attributeType ) {
-
-		let numComponents = attribute.num_components();
-		let numPoints = dracoGeometry.num_points();
-		let numValues = numPoints * numComponents;
-
-		let ptr;
-		let array;
-
-		let dataSize;
-		switch ( attributeType ) {
-
-			case "Float32Array":
-				dataSize = numValues * 4;
-				ptr = draco._malloc( dataSize );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_FLOAT32, dataSize, ptr );
-				array = new Float32Array( draco.HEAPF32.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Int8Array":
-				ptr = draco._malloc( numValues );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT8, numValues, ptr );
-				array = new Int8Array( draco.HEAP8.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Int16Array":
-				dataSize = numValues * 2;
-				ptr = draco._malloc( dataSize );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT16, dataSize, ptr );
-				array = new Int16Array( draco.HEAP16.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Int32Array":
-				dataSize = numValues * 4;
-				ptr = draco._malloc( dataSize );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT32, dataSize, ptr );
-				array = new Int32Array( draco.HEAP32.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Uint8Array":
-				ptr = draco._malloc( numValues );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT8, numValues, ptr );
-				array = new Uint8Array( draco.HEAPU8.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Uint16Array":
-				dataSize = numValues * 2;
-				ptr = draco._malloc( dataSize );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT16, dataSize, ptr );
-				array = new Uint16Array( draco.HEAPU16.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			case "Uint32Array":
-				dataSize = numValues * 4;
-				ptr = draco._malloc( dataSize );
-				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT32, dataSize, ptr );
-				array = new Uint32Array( draco.HEAPU32.buffer, ptr, numValues ).slice();
-				draco._free( ptr );
-				break;
-
-			default:
-				throw new Error( 'DRACOLoader: Unexpected attribute type.' );
-
-		}
-
-		return {
-			name: attributeName,
-			array: array,
-			itemSize: numComponents,
-			componentType: attributeType
-		};
-
-	}
-
 	 _parseMaterials( gltf: GlTf, material: Material, index: number ): Program {
 
 		//TODO:Full PBR program setup
@@ -874,6 +686,194 @@ export default class GLTFLoader {
 		// Attach binary to buffer
 		json.buffers[ 0 ].binary = binary;
 		return json;
+
+	}
+
+	_decodeGeometry( draco, decoder, decoderBuffer, gltfDracoAttributes, gltf, primitive ) {
+
+		let dracoGeometry;
+		let decodingStatus;
+
+		// decode mesh in draco decoder
+		let geometryType = decoder.GetEncodedGeometryType( decoderBuffer );
+		if ( geometryType === draco.TRIANGULAR_MESH ) {
+
+			dracoGeometry = new draco.Mesh();
+			decodingStatus = decoder.DecodeBufferToMesh( decoderBuffer, dracoGeometry );
+
+		} else {
+
+			throw new Error( 'DRACOLoader: Unexpected geometry type.' );
+
+		}
+
+		if ( ! decodingStatus.ok() || dracoGeometry.ptr === 0 ) {
+
+			throw new Error( 'DRACOLoader: Decoding failed: ' + decodingStatus.error_msg() );
+
+		}
+
+		let geometry = { index: null, attributes: {} };
+		let vertexCount = dracoGeometry.num_points();
+
+		// Gather all vertex attributes.
+		for ( let dracoAttr in gltfDracoAttributes ) {
+
+			let componentType = "Int8Array"; // defualt
+			let accessorVertexCount;
+
+			// find gltf accessor for this draco attribute
+			for ( const [ key, value ] of Object.entries( primitive.attributes ) ) {
+
+				if ( key === dracoAttr ) {
+
+					componentType = gltf.accessors[ value as number ].componentType;
+					accessorVertexCount = gltf.accessors[ value as number ].count;
+					break;
+
+				}
+
+			}
+
+			// check if vertex count matches
+			if ( vertexCount !== accessorVertexCount ) {
+
+				throw new Error( `DRACOLoader: Accessor vertex count ${accessorVertexCount} does not match draco decoder vertex count  ${vertexCount}` );
+
+			}
+
+			componentType = this._getDracoArrayTypeFromComponentType( componentType );
+
+			let dracoAttribute = decoder.GetAttributeByUniqueId( dracoGeometry, gltfDracoAttributes[ dracoAttr ] );
+			var tmpObj = this._decodeAttribute( draco, decoder,
+				dracoGeometry, dracoAttr, dracoAttribute, componentType );
+			geometry.attributes[ tmpObj.name ] = tmpObj;
+
+		}
+
+		// Add index buffer
+		if ( geometryType === draco.TRIANGULAR_MESH ) {
+
+			// Generate mesh faces.
+			let numFaces = dracoGeometry.num_faces();
+			let numIndices = numFaces * 3;
+			let dataSize = numIndices * 4;
+			let ptr = draco._malloc( dataSize );
+			decoder.GetTrianglesUInt32Array( dracoGeometry, dataSize, ptr );
+			let index = new Uint32Array( draco.HEAPU32.buffer, ptr, numIndices ).slice();
+			draco._free( ptr );
+
+			geometry.index = { array: index, itemSize: 1 };
+
+		}
+
+		draco.destroy( dracoGeometry );
+		return geometry;
+
+	}
+
+	_getDracoArrayTypeFromComponentType( componentType ): string {
+
+		switch ( componentType ) {
+
+			case BYTE:
+				return "Int8Array";
+			case UNSIGNED_BYTE:
+				return "Uint8Array";
+			case SHORT:
+				return "Int16Array";
+			case UNSIGNED_SHORT:
+				return "Uint16Array";
+			case INT:
+				return "Int32Array";
+			case UNSIGNED_INT:
+				return "Uint32Array";
+			case FLOAT:
+				return "Float32Array";
+			default:
+				return "Float32Array";
+
+		}
+
+	}
+
+	_decodeAttribute( draco, decoder, dracoGeometry, attributeName, attribute, attributeType ) {
+
+		let numComponents = attribute.num_components();
+		let numPoints = dracoGeometry.num_points();
+		let numValues = numPoints * numComponents;
+
+		let ptr;
+		let array;
+
+		let dataSize;
+		switch ( attributeType ) {
+
+			case "Float32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_FLOAT32, dataSize, ptr );
+				array = new Float32Array( draco.HEAPF32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int8Array":
+				ptr = draco._malloc( numValues );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT8, numValues, ptr );
+				array = new Int8Array( draco.HEAP8.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int16Array":
+				dataSize = numValues * 2;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT16, dataSize, ptr );
+				array = new Int16Array( draco.HEAP16.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Int32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT32, dataSize, ptr );
+				array = new Int32Array( draco.HEAP32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint8Array":
+				ptr = draco._malloc( numValues );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT8, numValues, ptr );
+				array = new Uint8Array( draco.HEAPU8.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint16Array":
+				dataSize = numValues * 2;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT16, dataSize, ptr );
+				array = new Uint16Array( draco.HEAPU16.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			case "Uint32Array":
+				dataSize = numValues * 4;
+				ptr = draco._malloc( dataSize );
+				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT32, dataSize, ptr );
+				array = new Uint32Array( draco.HEAPU32.buffer, ptr, numValues ).slice();
+				draco._free( ptr );
+				break;
+
+			default:
+				throw new Error( 'DRACOLoader: Unexpected attribute type.' );
+
+		}
+
+		return {
+			name: attributeName,
+			array: array,
+			itemSize: numComponents,
+			componentType: attributeType
+		};
 
 	}
 
