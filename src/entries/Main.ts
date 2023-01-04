@@ -1,21 +1,25 @@
-
-import Example from "@/webgl/sketches/pbr";
+import Example from "@/webgl/sketches/baked-animation";
+import { EventListeners, GL_RESIZE_TOPIC } from "@bolt-webgl/core";
 
 export default class Main {
+  _loading: boolean;
+  _eventListeners = EventListeners.getInstance();
+  _example: Example;
 
-	loading: boolean;
+  constructor() {
+    this._loading = false;
 
-	constructor() {
+    this._eventListeners.listen(GL_RESIZE_TOPIC, this._resize.bind(this));
+  }
 
-		this.loading = false;
+  _resize() {
+    console.log("resize");
+    if (!this._example) return;
+    this._example.resize();
+  }
 
-	}
-
-	_start() {
-
-		const example = new Example();
-		example.start();
-
-	}
-
+  _start() {
+    this._example = new Example();
+    this._example.start();
+  }
 }

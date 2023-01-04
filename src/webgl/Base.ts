@@ -1,119 +1,96 @@
-
-
-
 import Stats from "stats.js";
 
 import { glSettings } from "@webgl/globals/constants";
-import EventListeners from "./modules/event-listeners";
-import { GL_UPDATE_TOPIC } from "./modules/event-listeners/constants";
+import { EventListeners } from "@bolt-webgl/core";
+import { GL_UPDATE_TOPIC } from "../common/events";
 
 const { DEBUG_FPS } = glSettings;
 
 export default abstract class Base {
+  isRunning = false;
+  requestFrame?: number;
+  elapsed = 0;
+  stats?: Stats;
+  drawCallCount?: number;
+  now: number;
+  width: number;
+  height: number;
+  delta: number;
+  currentTime: number;
+  lastTime: number;
+  eventListeners = EventListeners.getInstance();
 
-	isRunning = false;
-	requestFrame?: number;
-	elapsed = 0;
-	stats?: Stats;
-	drawCallCount?: number;
-	now: number;
-	width: number;
-	height: number;
-	delta: number;
-	currentTime: number;
-	lastTime: number;
-	eventListeners = EventListeners.getInstance()
+  constructor() {
+    this.now = Date.now();
 
-	constructor() {
+    this.delta = 0;
+    (this.lastTime = new Date().getTime()),
+      (this.currentTime = 0),
+      (this.delta = 0);
 
-		this.now = Date.now();
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
 
-		this.delta = 0;
-		this.lastTime = ( new Date() ).getTime(),
-		this.currentTime = 0,
-		this.delta = 0;
+    if (DEBUG_FPS) {
+      this.stats = new Stats();
+      this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+      document.body.appendChild(this.stats.dom);
+    }
 
-		this.width = window.innerWidth;
-		this.height = window.innerHeight;
+    document.addEventListener("visibilitychange", () => {
+      document.visibilityState === "visible" ? this.start() : this.pause();
+    });
+  }
 
-		if ( DEBUG_FPS ) {
+  start() {
+    this.isRunning = true;
+    this.run(0);
+  }
 
-			this.stats = new Stats();
-			this.stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-			document.body.appendChild( this.stats.dom );
+  destroy() {
+    if (this.requestFrame) {
+      cancelAnimationFrame(this.requestFrame);
+      this.requestFrame = undefined;
+    }
+  }
 
-		}
+  pause() {
+    if (this.requestFrame) {
+      cancelAnimationFrame(this.requestFrame);
+      this.requestFrame = undefined;
+    }
 
-		document.addEventListener( "visibilitychange", () => {
+    this.isRunning = false;
+  }
 
-			document.visibilityState === "visible" ? this.start() : this.pause();
+  abstract earlyUpdate(elapsed: number, delta: number): void;
 
-		} );
+  abstract update(elapsed: number, delta: number): void;
 
-	}
+  abstract lateUpdate(elapsed: number, delta: number): void;
 
-	start() {
+  run(timestamp: number) {
+    const { DEBUG_FPS } = glSettings;
 
-		this.isRunning = true;
-		this.run( 0 );
+    if (DEBUG_FPS) this.stats?.begin();
 
-	}
+    this.elapsed = timestamp * 0.001;
+    this.delta = this.elapsed - this.lastTime;
+    this.lastTime = this.elapsed;
 
-	destroy() {
+    this.eventListeners.publish(GL_UPDATE_TOPIC, {
+      elapsed: this.elapsed,
+      delta: this.delta,
+    });
 
-		if ( this.requestFrame ) {
+    this.earlyUpdate(this.elapsed, this.delta);
+    this.update(this.elapsed, this.delta);
+    this.lateUpdate(this.elapsed, this.delta);
 
-			cancelAnimationFrame( this.requestFrame );
-			this.requestFrame = undefined;
+    if (DEBUG_FPS) this.stats?.end();
 
-		}
-
-	}
-
-
-	pause() {
-
-		if ( this.requestFrame ) {
-
-			cancelAnimationFrame( this.requestFrame );
-			this.requestFrame = undefined;
-
-		}
-
-		this.isRunning = false;
-
-	}
-
-	abstract earlyUpdate( elapsed: number, delta: number ): void;
-
-	abstract update( elapsed: number, delta: number ): void;
-
-	abstract lateUpdate( elapsed: number, delta: number ): void;
-
-	run( timestamp: number ) {
-
-		const { DEBUG_FPS } = glSettings;
-
-		if ( DEBUG_FPS ) this.stats?.begin();
-
-		this.elapsed = timestamp * 0.001;
-		this.delta = this.elapsed - this.lastTime;
-		this.lastTime = this.elapsed;
-
-		this.eventListeners.publish( GL_UPDATE_TOPIC, { elapsed: this.elapsed, delta: this.delta } );
-
-		this.earlyUpdate( this.elapsed, this.delta );
-		this.update( this.elapsed, this.delta );
-		this.lateUpdate( this.elapsed, this.delta );
-
-		if ( DEBUG_FPS ) this.stats?.end();
-
-		if ( this.isRunning ) {
-
-			this.requestFrame = requestAnimationFrame( this.run.bind( this ) );
-
-		}
-
-	}
-
+    if (this.isRunning) {
+      this.requestFrame = requestAnimationFrame(this.run.bind(this));
+    }
+  }
 }
