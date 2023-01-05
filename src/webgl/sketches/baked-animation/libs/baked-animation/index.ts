@@ -11,19 +11,31 @@ export default class BakedAnimation {
   constructor(channels: Channel) {
     this._channels = channels;
 
-    this.runAnimation("ArmatureAction");
+    this.runAnimation("Bip001|Take 001|BaseLayer");
 
     if (this._currentAnimation) {
-      const translations = Object.values(this._currentAnimation).map(
-        ({ translation }) => translation
-      );
-
-      const flattened = [].concat(...translations);
-
-      // find min time and max by object time properties
-      this._minTime = Math.min(...flattened.map(({ time }) => time));
-      this._maxTime = Math.max(...flattened.map(({ time }) => time));
+      this._setMinAndMaxTime();
     }
+  }
+
+  _setMinAndMaxTime() {
+    const translations = Object.values(this._currentAnimation).map(
+      ({ translation }) => translation
+    );
+
+    const rotations = Object.values(this._currentAnimation).map(
+      ({ rotation }) => rotation
+    );
+
+    const scales = Object.values(this._currentAnimation).map(
+      ({ scale }) => scale
+    );
+
+    const flattened = [].concat(...translations, ...rotations, ...scales);
+
+    // find min time and max by object time properties
+    this._minTime = Math.min(...flattened.map(({ time }) => time));
+    this._maxTime = Math.max(...flattened.map(({ time }) => time));
   }
 
   runAnimation(animationName: string) {
@@ -31,7 +43,7 @@ export default class BakedAnimation {
     this._currentAnimation = this._channels[animationName];
   }
 
-  _getTransform(keyframes: KeyFrame[]) {
+  _getKeyFrameTransform(keyframes: KeyFrame[]) {
     // get the previous and next keyframes for each transform
     const nextPrevKeyFrames = this._getPrevAndNextKeyFrames(keyframes);
 
@@ -78,9 +90,9 @@ export default class BakedAnimation {
       const rotationKeyframe = transformData.rotation as KeyFrame[];
       const scaleKeyframe = transformData.scale as KeyFrame[];
 
-      const t = this._getTransform(translationKeyframe);
-      const r = this._getTransform(rotationKeyframe);
-      const s = this._getTransform(scaleKeyframe);
+      const t = this._getKeyFrameTransform(translationKeyframe);
+      const r = this._getKeyFrameTransform(rotationKeyframe);
+      const s = this._getKeyFrameTransform(scaleKeyframe);
 
       transformData.node.transform.position = t;
       transformData.node.transform.quaternion = r;

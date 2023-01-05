@@ -1,13 +1,5 @@
-import {
-  CLAMP_TO_EDGE,
-  FLOAT,
-  NEAREST,
-  Node,
-  RGBA,
-  RGBA32f,
-  Texture2D,
-} from "@bolt-webgl/core";
-import { mat4 } from "gl-matrix";
+import { Node, Texture2D } from "@bolt-webgl/core";
+import { mat4, vec3 } from "gl-matrix";
 
 export default class Skin {
   private _joints: Node[];
@@ -16,6 +8,9 @@ export default class Skin {
   private _jointData: Float32Array;
   private _jointTexture: Texture2D;
   private _globalWorldInverse = mat4.create();
+  private _scaleFactor = vec3.fromValues(1, 1, 1);
+  private _position = vec3.fromValues(0, 0, 0);
+  private _root = mat4.create();
 
   constructor(joints: Node[], inverseBindMatrixData: Float32Array) {
     this._joints = joints;
@@ -60,11 +55,20 @@ export default class Skin {
     // });
   }
 
-  update(node: Node) {
-    //console.log(node);
-    const globalInverse = mat4.create();
+  setScale(scale: vec3) {
+    this._scaleFactor = scale;
+  }
 
-    mat4.invert(globalInverse, node.modelMatrix);
+  setPosition(position: vec3) {
+    this._position = position;
+  }
+
+  update(node: Node) {
+    const root = mat4.create();
+
+    mat4.translate(root, root, this._position);
+    mat4.scale(root, root, this._scaleFactor);
+    mat4.invert(this._globalWorldInverse, node.modelMatrix);
 
     // apply inverse bind matrix to each joint
 
@@ -73,8 +77,9 @@ export default class Skin {
 
       const dst = this._jointMatrices[i];
 
-      mat4.multiply(dst, globalInverse, joint.modelMatrix);
+      mat4.multiply(dst, this._globalWorldInverse, joint.modelMatrix);
       mat4.multiply(dst, dst, this._inverseBindMatrices[i]);
+      mat4.multiply(dst, root, dst);
     }
 
     //this._jointTexture.setFromData(this._jointData, 4, this._joints.length);

@@ -6,6 +6,7 @@ import {
   Node,
   Orbit,
   EventListeners,
+  DrawSet,
 } from "@bolt-webgl/core";
 
 import { quat, vec3 } from "gl-matrix";
@@ -15,6 +16,7 @@ import GLTFLoader from "./libs/gltf-loader";
 
 import BakedAnimation from "./libs/baked-animation";
 import Floor from "@/webgl/drawSets/floor";
+import SkinMesh from "./libs/gltf-loader/SkinMesh";
 
 export default class extends Base {
   canvas: HTMLCanvasElement;
@@ -57,12 +59,12 @@ export default class extends Base {
       fov: 45,
       near: 0.1,
       far: 1000,
-      position: vec3.fromValues(0, 1, 15),
-      target: vec3.fromValues(0, 6, 0),
+      position: vec3.fromValues(0, 10, 20),
+      target: vec3.fromValues(0, 3, 0),
     });
 
     this.orbit = new Orbit(this.camera, {
-      zoomSpeed: 0.5,
+      zoomSpeed: 3,
     });
 
     this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
@@ -79,10 +81,21 @@ export default class extends Base {
     this.floor = new Floor(100);
 
     this.glb = await this.gtlfLoader.load(
-      "/static/models/gltf/examples/character/scene.glb"
+      "/static/models/gltf/examples/trex.glb"
     );
 
-    //this.glb.transform.scale = vec3.fromValues(5, 5, 5);
+    // scale up the skin mesh joints
+    this.glb.traverse((node: Node) => {
+      if (node instanceof DrawSet) {
+        if (node.mesh && node.mesh.isSkinMesh) {
+          const skinMesh = node.mesh as SkinMesh;
+          skinMesh.skin && skinMesh.skin.setScale(vec3.fromValues(75, 75, 75));
+          console.log(skinMesh.skin);
+        }
+      }
+    });
+
+    this.glb.transform.positionY = -1.25;
 
     const gltfAnimations = this.gtlfLoader.animations;
 
@@ -107,22 +120,13 @@ export default class extends Base {
 
     this.orbit.update();
 
-    // draw scenery
-
-    const q = quat.create();
-    quat.rotateX(q, q, -0.6);
-
-    this.glb.traverse((node) => {
-      if (node.name === "Shoulder_R_Reference") {
-        quat.multiply(node.transform.quaternion, q, node.transform.quaternion);
-      }
-    });
+    this.glb.transform.rotateY(0.01);
 
     this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
-    this.bolt.clear(0.7, 0.7, 0.7, 1);
-    this.bolt.draw(this.floor);
+    this.bolt.clear(0, 0, 0, 1);
 
     this._characterAnimation.update(elapsed, delta);
+
     this.bolt.draw(this.glb);
   }
 

@@ -22,10 +22,10 @@ uniform mat4 normal;
 uniform mat4 jointTransforms[128];
 uniform float jointCount;
 
-// #define ROW0_U ((0.5 + 0.0) / 4.)
-// #define ROW1_U ((0.5 + 1.0) / 4.)
-// #define ROW2_U ((0.5 + 2.0) / 4.)
-// #define ROW3_U ((0.5 + 3.0) / 4.)
+#define ROW0_U ((0.5 + 0.0) / 4.)
+#define ROW1_U ((0.5 + 1.0) / 4.)
+#define ROW2_U ((0.5 + 2.0) / 4.)
+#define ROW3_U ((0.5 + 3.0) / 4.)
 
 // mat4 getBoneMatrix(int jointIndex) {
 
@@ -55,6 +55,11 @@ void main() {
     jointTransforms[int(aJoints.y)] * aWeights.y +
     jointTransforms[int(aJoints.z)] * aWeights.z +
     jointTransforms[int(aJoints.w)] * aWeights.w;
+
+  // skinMatrix = getBoneMatrix(aJoints.x) * aWeights.x +
+  //   getBoneMatrix(aJoints.y) * aWeights.y +
+  //   getBoneMatrix(aJoints.z) * aWeights.z +
+  //   getBoneMatrix(aJoints.w) * aWeights.w;
 
   mat4 combinedModel = model * skinMatrix;
 
