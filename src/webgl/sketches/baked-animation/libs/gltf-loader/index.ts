@@ -1035,7 +1035,7 @@ export default class GLTFLoader {
         const jointNode = this._nodes[channel.node].node;
 
         c[channel.node] = {
-          [jointNode.name]: jointNode,
+          node: jointNode,
           translation: [],
           rotation: [],
           scale: [],
@@ -1226,6 +1226,8 @@ export default class GLTFLoader {
               "TEXCOORD_1"
             ) || undefined;
 
+          console.log(uvs);
+
           const normals =
             this._getBufferByAttribute(
               gltf,
@@ -1347,13 +1349,12 @@ export default class GLTFLoader {
       const { baseColorTexture, baseColorFactor } =
         material.pbrMetallicRoughness;
 
-      program.activate();
-
       // program.setTexture( "mapAlbedo", new Texture2D() );
       // program.setTexture( "mapRadiance", this._radianceMap );
       // program.setTexture( "mapIrradiance", this._irradianceMap );
 
       if (baseColorTexture !== undefined) {
+        program.activate();
         program.setTexture("mapAlbedo", this._textures[baseColorTexture.index]);
       }
 

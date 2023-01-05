@@ -13,15 +13,17 @@ export default class BakedAnimation {
 
     this.runAnimation("ArmatureAction");
 
-    const translations = Object.values(this._currentAnimation).map(
-      ({ translation }) => translation
-    );
+    if (this._currentAnimation) {
+      const translations = Object.values(this._currentAnimation).map(
+        ({ translation }) => translation
+      );
 
-    const flattened = [].concat(...translations);
+      const flattened = [].concat(...translations);
 
-    // find min time and max by object time properties
-    this._minTime = Math.min(...flattened.map(({ time }) => time));
-    this._maxTime = Math.max(...flattened.map(({ time }) => time));
+      // find min time and max by object time properties
+      this._minTime = Math.min(...flattened.map(({ time }) => time));
+      this._maxTime = Math.max(...flattened.map(({ time }) => time));
+    }
   }
 
   runAnimation(animationName: string) {
@@ -29,33 +31,60 @@ export default class BakedAnimation {
     this._currentAnimation = this._channels[animationName];
   }
 
+  _getTransform(keyframes: KeyFrame[]) {
+    // get the previous and next keyframes for each transform
+    const nextPrevKeyFrames = this._getPrevAndNextKeyFrames(keyframes);
+
+    const progression =
+      (this._animationTime - nextPrevKeyFrames.prevKeyFrame.time) /
+      (nextPrevKeyFrames.nextKeyFrame.time -
+        nextPrevKeyFrames.prevKeyFrame.time);
+
+    if (
+      nextPrevKeyFrames.prevKeyFrame.type === "translation" ||
+      nextPrevKeyFrames.prevKeyFrame.type === "scale"
+    ) {
+      const result = vec3.create(); // TODO: cache this
+      vec3.lerp(
+        result,
+        nextPrevKeyFrames.prevKeyFrame.transform as vec3,
+        nextPrevKeyFrames.nextKeyFrame.transform as vec3,
+        progression
+      );
+      return result;
+    } else {
+      const result = quat.create(); // TODO: cache this
+      quat.slerp(
+        result,
+        nextPrevKeyFrames.prevKeyFrame.transform as quat,
+        nextPrevKeyFrames.nextKeyFrame.transform as quat,
+        progression
+      );
+      return result;
+    }
+  }
+
   update(elapsed, delta) {
-    this._animationTime += delta;
+    if (!this._currentAnimation) return;
+
+    this._animationTime += delta * 1;
 
     if (this._animationTime > this._maxTime) {
       this._animationTime = this._minTime;
     }
 
     Object.values(this._currentAnimation).forEach((transformData) => {
-      const translation = transformData.translation as KeyFrame[];
-      const rotation = transformData.rotation as KeyFrame[];
-      const scale = transformData.scale as KeyFrame[];
+      const translationKeyframe = transformData.translation as KeyFrame[];
+      const rotationKeyframe = transformData.rotation as KeyFrame[];
+      const scaleKeyframe = transformData.scale as KeyFrame[];
 
-      // get the previous and next keyframes for each transform
-      const translationTransform = this._getPrevAndNextKeyFrames(
-        translation,
-        this._animationTime
-      );
+      const t = this._getTransform(translationKeyframe);
+      const r = this._getTransform(rotationKeyframe);
+      const s = this._getTransform(scaleKeyframe);
 
-      const rotationTransform = this._getPrevAndNextKeyFrames(
-        rotation,
-        this._animationTime
-      );
-
-      const scaleTransform = this._getPrevAndNextKeyFrames(
-        scale,
-        this._animationTime
-      );
+      transformData.node.transform.position = t;
+      transformData.node.transform.quaternion = r;
+      transformData.node.transform.scale = s;
     });
   }
 
@@ -85,12 +114,19 @@ export default class BakedAnimation {
     return prevVal;
   }
 
-  _getPrevAndNextKeyFrames(
-    keyframes: KeyFrame[],
-    time: number
-  ): { prevKeyFrame: KeyFrame; nextKeyFrame: KeyFrame } {
-    const prevKeyFrame = keyframes.find(({ time: t }) => t <= time);
-    const nextKeyFrame = keyframes.find(({ time: t }) => t >= time);
+  _getPrevAndNextKeyFrames(keyFrames: KeyFrame[]): {
+    prevKeyFrame: KeyFrame;
+    nextKeyFrame: KeyFrame;
+  } {
+    let nextKeyFrame = keyFrames[0];
+    let prevKeyFrame = keyFrames[0];
+
+    for (let i = 1; i < keyFrames.length; i++) {
+      nextKeyFrame = keyFrames[i];
+      if (nextKeyFrame.time > this._animationTime) break;
+
+      prevKeyFrame = keyFrames[i];
+    }
 
     return { prevKeyFrame, nextKeyFrame };
   }

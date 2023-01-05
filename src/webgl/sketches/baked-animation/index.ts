@@ -82,11 +82,11 @@ export default class extends Base {
       "/static/models/gltf/examples/character/scene.glb"
     );
 
+    //this.glb.transform.scale = vec3.fromValues(5, 5, 5);
+
     const gltfAnimations = this.gtlfLoader.animations;
 
     this._characterAnimation = new BakedAnimation(gltfAnimations);
-
-    console.log(this._characterAnimation);
 
     this.assetsLoaded = true;
   }
