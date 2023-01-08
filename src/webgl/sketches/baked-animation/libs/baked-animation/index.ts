@@ -11,7 +11,9 @@ export default class BakedAnimation {
   constructor(channels: Channel) {
     this._channels = channels;
 
-    this.runAnimation("Bip001|Take 001|BaseLayer");
+    console.log(this._channels);
+
+    this.runAnimation("Armature|mixamo.com|Layer0");
 
     if (this._currentAnimation) {
       this._setMinAndMaxTime();

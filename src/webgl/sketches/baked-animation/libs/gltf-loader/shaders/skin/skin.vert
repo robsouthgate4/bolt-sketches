@@ -46,8 +46,6 @@ void main() {
 
   Uv = aUv;
   Normal = aNormal;
-  //Normal = aJoints.xyz / ( jointCount - 1.0 );
-  //Normal = aWeights.xyz;
 
   mat4 skinMatrix = mat4(1.0);
 
@@ -56,10 +54,7 @@ void main() {
     jointTransforms[int(aJoints.z)] * aWeights.z +
     jointTransforms[int(aJoints.w)] * aWeights.w;
 
-  // skinMatrix = getBoneMatrix(aJoints.x) * aWeights.x +
-  //   getBoneMatrix(aJoints.y) * aWeights.y +
-  //   getBoneMatrix(aJoints.z) * aWeights.z +
-  //   getBoneMatrix(aJoints.w) * aWeights.w;
+  //Normal = (normal * skinMatrix * vec4(aNormal, 0.0)).xyz;
 
   mat4 combinedModel = model * skinMatrix;
 

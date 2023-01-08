@@ -68,7 +68,7 @@ export default class Skin {
 
     mat4.translate(root, root, this._position);
     mat4.scale(root, root, this._scaleFactor);
-    mat4.invert(this._globalWorldInverse, node.modelMatrix);
+    mat4.invert(this._globalWorldInverse, node.worldMatrix);
 
     // apply inverse bind matrix to each joint
 

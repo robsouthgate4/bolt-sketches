@@ -14,6 +14,6 @@ void main() {
 
    vec3 color = texture(mapAlbedo, Uv).rgb;
 
-   FragColor = vec4( color, 1.0);
+   FragColor = vec4( Normal, 1.0);
 
 }

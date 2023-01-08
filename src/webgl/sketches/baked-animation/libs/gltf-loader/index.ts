@@ -1278,7 +1278,7 @@ export default class GLTFLoader {
               "WEIGHTS_0"
             ) || undefined;
 
-          let mesh: Mesh | SkinMesh;
+          let m: Mesh | SkinMesh;
 
           const prog =
             this._materials && primitive.material !== undefined
@@ -1287,16 +1287,16 @@ export default class GLTFLoader {
 
           if (node && node.skin !== undefined) {
             // form skinned mesh data if joints defined
-            mesh = new SkinMesh(geometry);
+            m = new SkinMesh(geometry);
 
-            mesh.setAttribute(Float32Array.from(joints.data), joints.size, 5);
-            mesh.setAttribute(weights.data, weights.size, 6);
+            m.setAttribute(Float32Array.from(joints.data), joints.size, 5);
+            m.setAttribute(weights.data, weights.size, 6);
           } else {
-            mesh = new Mesh(geometry);
+            m = new Mesh(geometry);
           }
 
-          const ds = new DrawSet(mesh, prog);
-          ds.name = mesh.name;
+          const ds = new DrawSet(m, prog);
+          ds.name = m.name;
 
           // for non-hierarchical gltf files
           this._drawSetsFlattened.push(ds);
@@ -1479,6 +1479,7 @@ export default class GLTFLoader {
 
   _getAccessor = (
     gltf: GlTf,
+    mesh: GLTFMesh,
     primitive: MeshPrimitive,
     attributeName: string
   ) => {

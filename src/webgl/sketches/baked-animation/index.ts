@@ -7,15 +7,20 @@ import {
   Orbit,
   EventListeners,
   DrawSet,
+  Cube,
+  Mesh,
 } from "@bolt-webgl/core";
 
-import { quat, vec3 } from "gl-matrix";
+import { mat4, quat, vec3 } from "gl-matrix";
 import config from "./config";
 
 import GLTFLoader from "./libs/gltf-loader";
 
 import BakedAnimation from "./libs/baked-animation";
 import Floor from "@/webgl/drawSets/floor";
+
+import vertexShader from "./programs/normal/shaders/vertexShader.glsl";
+import fragmentShader from "./programs/normal/shaders/fragmentShader.glsl";
 import SkinMesh from "./libs/gltf-loader/SkinMesh";
 
 export default class extends Base {
@@ -31,7 +36,11 @@ export default class extends Base {
   glb: Node;
 
   private _characterAnimation: BakedAnimation;
-  floor: Floor;
+  private floor: Floor;
+  private nodes: any[];
+  private _cubeDS: DrawSet;
+  private root: Node;
+  private _neckJoint: Node;
 
   constructor() {
     super();
@@ -59,12 +68,13 @@ export default class extends Base {
       fov: 45,
       near: 0.1,
       far: 1000,
-      position: vec3.fromValues(0, 10, 20),
-      target: vec3.fromValues(0, 3, 0),
+      position: vec3.fromValues(0, 15, 30),
+      target: vec3.fromValues(0, 15, 0),
     });
 
     this.orbit = new Orbit(this.camera, {
       zoomSpeed: 3,
+      maxRadius: 300,
     });
 
     this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
@@ -81,21 +91,30 @@ export default class extends Base {
     this.floor = new Floor(100);
 
     this.glb = await this.gtlfLoader.load(
-      "/static/models/gltf/examples/trex.glb"
+      "/static/models/gltf/examples/character/running-man.glb"
     );
 
-    // scale up the skin mesh joints
+    console.log(this.glb);
+
+    this.nodes = [];
+
+    this.root = new Node();
+
+    this.glb.setParent(this.root);
+
+    this.root.transform.scale = vec3.fromValues(1, 1, 1);
+
+    const cubeGeo = new Cube();
+    const cubeProg = new Program(vertexShader, fragmentShader);
+
+    this._cubeDS = new DrawSet(new Mesh(cubeGeo), cubeProg);
+    this._cubeDS.transform.scale = vec3.fromValues(2, 2, 2);
+
     this.glb.traverse((node: Node) => {
-      if (node instanceof DrawSet) {
-        if (node.mesh && node.mesh.isSkinMesh) {
-          const skinMesh = node.mesh as SkinMesh;
-          skinMesh.skin && skinMesh.skin.setScale(vec3.fromValues(75, 75, 75));
-          console.log(skinMesh.skin);
-        }
+      if (node.name && node.name.includes("Leg")) {
+        this._neckJoint = node;
       }
     });
-
-    this.glb.transform.positionY = -1.25;
 
     const gltfAnimations = this.gtlfLoader.animations;
 
@@ -119,15 +138,24 @@ export default class extends Base {
     if (!this.assetsLoaded) return;
 
     this.orbit.update();
-
-    this.glb.transform.rotateY(0.01);
-
     this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
     this.bolt.clear(0, 0, 0, 1);
 
     this._characterAnimation.update(elapsed, delta);
 
-    this.bolt.draw(this.glb);
+    //this.glb.updateModelMatrix();
+
+    const worldMatrix = this._neckJoint.modelMatrix;
+
+    const pos = mat4.getTranslation(vec3.create(), worldMatrix);
+    const rot = mat4.getRotation(quat.create(), worldMatrix);
+
+    this._cubeDS.transform.position = pos;
+    this._cubeDS.transform.quaternion = rot;
+
+    this.bolt.draw(this._cubeDS);
+    this.bolt.draw(this.root);
+    this.bolt.draw(this.floor);
   }
 
   lateUpdate(elapsed: number, delta: number) {
