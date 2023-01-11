@@ -13,6 +13,8 @@ uniform mat4 normal;
 uniform mat4 modelView;
 uniform mat4 modelViewInverse;
 
+uniform sampler2D	testTexture;
+
 out vec2 Uv;
 
 out vec3 Normal;
@@ -22,7 +24,7 @@ void main() {
 	vec3 position 			= aPosition;
 
 	// get the world space normal
-	Normal						= aNormal;
+	Normal						= vec3( model * vec4( aNormal, 0.0 ) );
 
 	gl_Position				= projection * modelView * vec4( aPosition, 1.0 );
 

@@ -21,9 +21,9 @@ export default class SkinMesh extends Mesh {
 
     this._skin.update(node!);
 
-    // activate program and pass joint data to program
     program.activate();
-    //program.setTexture("jointTexture", this._skin.jointTexture);
+    // activate program and pass joint data to program
+    program.setTexture("jointTexture", this._skin.jointTexture);
 
     program.setMatrix4(
       "jointTransforms",

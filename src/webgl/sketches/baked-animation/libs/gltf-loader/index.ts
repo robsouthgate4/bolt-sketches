@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 //@ts-nocheck
-import { mat4, quat, vec3 } from "gl-matrix";
+import { mat4, quat, vec3, vec4 } from "gl-matrix";
 
 import {
   Bolt,
@@ -935,8 +935,8 @@ export default class GLTFLoader {
         if (node.mesh !== undefined) {
           const b = this._drawSets[node.mesh];
 
-          b.forEach((batch?: DrawSet) => {
-            batch?.setParent(this._nodes[i].node);
+          b.forEach((drawset?: DrawSet) => {
+            drawset?.setParent(this._nodes[i].node);
           });
         }
       }
@@ -963,15 +963,13 @@ export default class GLTFLoader {
         const nodeIndex = skinNode.nodeIndex;
 
         if (mesh !== undefined) {
-          const b = this._drawSets[mesh];
+          const ds = this._drawSets[mesh];
 
-          if (b !== undefined) {
-            b.forEach((batch?: DrawSet) => {
-              const mesh = batch!.mesh as SkinMesh;
-
+          if (ds !== undefined) {
+            ds.forEach((drawset?: DrawSet) => {
+              const mesh = drawset!.mesh as SkinMesh;
               mesh.skin = skin;
-
-              batch?.setParent(this._nodes[nodeIndex].node);
+              drawset?.setParent(this._nodes[nodeIndex].node);
             });
           }
         }
@@ -983,7 +981,7 @@ export default class GLTFLoader {
     this._json.scenes.forEach((scene) => {
       this._scene.name = scene.name;
 
-      console.log(scene.nodes[0]);
+      //console.log(scene.nodes[0]);
 
       scene.nodes?.forEach((childNode) => {
         const child = this._nodes[childNode];
@@ -1083,7 +1081,11 @@ export default class GLTFLoader {
       buffers,
       gltf.accessors[skin.inverseBindMatrices]
     );
-    const joints = skin.joints.map((ndx) => this._nodes[ndx].node);
+    const joints = skin.joints.map((ndx) => {
+      const jointNode = this._nodes[ndx].node;
+      jointNode.isJoint = true;
+      return jointNode;
+    });
     return new Skin(joints, Float32Array.from(bindTransforms.data));
   }
 
@@ -1165,39 +1167,47 @@ export default class GLTFLoader {
 
           draco.destroy(decoderBuffer);
 
-          //TODO: add support for skinned meshes
-
           const geometry: GeometryBuffers = {
-            //@ts-ignore
             positions: dracoGeometry.attributes.POSITION.array as Float32Array,
-            //@ts-ignore
             normals: dracoGeometry.attributes.NORMAL
-              ? (dracoGeometry.attributes.NORMAL!.array as Float32Array)
+              ? (dracoGeometry.attributes.NORMAL.array as Float32Array)
               : undefined,
-            //@ts-ignore
             uvs: dracoGeometry.attributes.TEXCOORD_0
-              ? (dracoGeometry.attributes.TEXCOORD_0!.array as Float32Array)
+              ? (dracoGeometry.attributes.TEXCOORD_0.array as Float32Array)
               : undefined,
-            //@ts-ignore
             uvs2: dracoGeometry.attributes.TEXCOORD_1
-              ? (dracoGeometry.attributes.TEXCOORD_1!.array as Float32Array)
+              ? (dracoGeometry.attributes.TEXCOORD_1.array as Float32Array)
               : undefined,
             indices: dracoGeometry.index
               ? (dracoGeometry.index.array as Uint16Array)
               : undefined,
           };
 
-          // let m: Mesh | SkinMesh;
-          // let s: Program;
+          // get joints from buffer
+          const joints = dracoGeometry.attributes.JOINTS_0 || undefined;
 
-          const s =
+          const weights = dracoGeometry.attributes.WEIGHTS_0 || undefined;
+
+          let m: Mesh | SkinMesh;
+
+          const prog =
             this._materials && primitive.material !== undefined
               ? this._materials[primitive.material as number]
               : new Program(vertexShader, fragmentShader);
 
-          const m = new Mesh(geometry);
+          if (node && node.skin !== undefined) {
+            console.log("skinned mesh detected");
 
-          const ds = new DrawSet(m, s);
+            // form skinned mesh data if joints defined
+            m = new SkinMesh(geometry);
+
+            m.setAttribute(Float32Array.from(joints.array), joints.itemSize, 5);
+            m.setAttribute(weights.array, weights.itemSize, 6);
+          } else {
+            m = new Mesh(geometry);
+          }
+
+          const ds = new DrawSet(m, prog);
           ds.name = mesh.name;
 
           this._drawSetsFlattened.push(ds);
@@ -1286,6 +1296,7 @@ export default class GLTFLoader {
               : new Program(vertexShader, fragmentShader);
 
           if (node && node.skin !== undefined) {
+            console.log("skinned mesh detected");
             // form skinned mesh data if joints defined
             m = new SkinMesh(geometry);
 
@@ -1344,29 +1355,44 @@ export default class GLTFLoader {
     }
 
     if (material.pbrMetallicRoughness !== undefined) {
-      const { baseColorTexture, baseColorFactor } =
+      const { baseColorTexture, baseColorFactor, metallicRoughnessTexture } =
         material.pbrMetallicRoughness;
 
       // program.setTexture( "mapAlbedo", new Texture2D() );
       // program.setTexture( "mapRadiance", this._radianceMap );
       // program.setTexture( "mapIrradiance", this._irradianceMap );
+      program.activate();
 
       if (baseColorTexture !== undefined) {
-        program.activate();
         program.setTexture("mapAlbedo", this._textures[baseColorTexture.index]);
       }
 
-      if (baseColorFactor !== undefined) {
-        // program.setVector4(
-        //   "baseColorFactor",
-        //   vec4.fromValues(
-        //     baseColorFactor[0],
-        //     baseColorFactor[1],
-        //     baseColorFactor[2],
-        //     baseColorFactor[3]
-        //   )
-        // );
+      if (metallicRoughnessTexture !== undefined) {
+        program.setTexture(
+          "mapMetallicRoughness",
+          this._textures[metallicRoughnessTexture.index]
+        );
       }
+
+      if (baseColorFactor !== undefined) {
+        program.setVector4(
+          "baseColorFactor",
+          vec4.fromValues(
+            baseColorFactor[0],
+            baseColorFactor[1],
+            baseColorFactor[2],
+            baseColorFactor[3]
+          )
+        );
+      }
+    }
+
+    if (material.normalTexture !== undefined) {
+      program.activate();
+      program.setTexture(
+        "mapNormal",
+        this._textures[material.normalTexture.index]
+      );
     }
 
     return program;

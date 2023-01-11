@@ -10,14 +10,6 @@ export default class BakedAnimation {
 
   constructor(channels: Channel) {
     this._channels = channels;
-
-    console.log(this._channels);
-
-    this.runAnimation("Armature|mixamo.com|Layer0");
-
-    if (this._currentAnimation) {
-      this._setMinAndMaxTime();
-    }
   }
 
   _setMinAndMaxTime() {
@@ -43,6 +35,9 @@ export default class BakedAnimation {
   runAnimation(animationName: string) {
     this._animationTime = 0;
     this._currentAnimation = this._channels[animationName];
+    if (this._currentAnimation) {
+      this._setMinAndMaxTime();
+    }
   }
 
   _getKeyFrameTransform(keyframes: KeyFrame[]) {
