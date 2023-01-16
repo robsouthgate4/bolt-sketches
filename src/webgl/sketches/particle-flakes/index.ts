@@ -262,6 +262,8 @@ export default class extends Base {
     );
     const diskMesh = gltfLoader.drawSetsFlattened[0].mesh;
 
+    console.log(diskMesh);
+
     this.maptcapDark = new Texture2D({
       imagePath: "/static/textures/matcap/matcap-black.jpeg",
       wrapS: this.gl.CLAMP_TO_EDGE,
@@ -354,7 +356,7 @@ export default class extends Base {
     const particleDrawSet = new DrawSet(
       new Mesh(
         {
-          ...diskMesh.buffers,
+          ...diskMesh.defaultBuffers,
         },
         {
           instanced: true,
@@ -369,7 +371,7 @@ export default class extends Base {
     const depthDrawSet = new DrawSet(
       new Mesh(
         {
-          ...diskMesh.buffers,
+          ...diskMesh.defaultBuffers,
         },
         {
           instanced: true,
@@ -510,7 +512,7 @@ export default class extends Base {
     this.simulationProgram.setFloat("repellorScale", d);
     this.transformFeedback.compute();
 
-    this.depthDrawState.draw();
+    //this.depthDrawState.draw();
 
     const bgLight = this.config.light.backgroundColor;
     const bgDark = this.config.dark.backgroundColor;

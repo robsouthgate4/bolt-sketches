@@ -1,6 +1,7 @@
 
 precision highp float;
 
+uniform sampler2D jointTexture;
 uniform sampler2D mapEnvironment;
 uniform sampler2D mapIrradiance;
 
@@ -198,6 +199,8 @@ vec3 getPbr(vec3 N, vec3 V, vec3 baseColor, float roughness, float metalness, fl
 	uv0 /= pow(2.0, level0);
 	uv0.y += 1.0 - exp( -LN2 * level0);
 
+	uv0.y = 1.0 - uv0.y;
+
 	uv1 /= pow(2.0, level1);
 	uv1.y += 1.0 - exp(-LN2 * level1);
 
@@ -249,7 +252,7 @@ void main() {
 	color				= pow( color, vec3( 1.0 / gamma ) );
 
 	// output the fragment color
-	FragColor		= vec4( color, 1.0 );
+	FragColor		= vec4(color, 1.0 );
 
 }
 

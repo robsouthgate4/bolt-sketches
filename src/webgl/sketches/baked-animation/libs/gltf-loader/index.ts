@@ -1361,18 +1361,20 @@ export default class GLTFLoader {
       // program.setTexture( "mapAlbedo", new Texture2D() );
       // program.setTexture( "mapRadiance", this._radianceMap );
       // program.setTexture( "mapIrradiance", this._irradianceMap );
+
+      console.log(baseColorFactor);
       program.activate();
+      //program.setTexture("jointTexture", t, 0);
+      // if (baseColorTexture !== undefined) {
+      //   program.setTexture("mapAlbedo", this._textures[baseColorTexture.index]);
+      // }
 
-      if (baseColorTexture !== undefined) {
-        program.setTexture("mapAlbedo", this._textures[baseColorTexture.index]);
-      }
-
-      if (metallicRoughnessTexture !== undefined) {
-        program.setTexture(
-          "mapMetallicRoughness",
-          this._textures[metallicRoughnessTexture.index]
-        );
-      }
+      // if (metallicRoughnessTexture !== undefined) {
+      //   program.setTexture(
+      //     "mapMetallicRoughness",
+      //     this._textures[metallicRoughnessTexture.index]
+      //   );
+      // }
 
       if (baseColorFactor !== undefined) {
         program.setVector4(
@@ -1387,13 +1389,13 @@ export default class GLTFLoader {
       }
     }
 
-    if (material.normalTexture !== undefined) {
-      program.activate();
-      program.setTexture(
-        "mapNormal",
-        this._textures[material.normalTexture.index]
-      );
-    }
+    // if (material.normalTexture !== undefined) {
+    //   program.activate();
+    //   program.setTexture(
+    //     "mapNormal",
+    //     this._textures[material.normalTexture.index]
+    //   );
+    // }
 
     return program;
   }

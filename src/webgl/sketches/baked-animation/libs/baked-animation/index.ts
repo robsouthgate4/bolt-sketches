@@ -76,7 +76,7 @@ export default class BakedAnimation {
   update(elapsed, delta) {
     if (!this._currentAnimation) return;
 
-    this._animationTime += delta * 1;
+    this._animationTime += delta;
 
     if (this._animationTime > this._maxTime) {
       this._animationTime = this._minTime;

@@ -1,4 +1,21 @@
-import { vec4 } from "gl-matrix";
+import { vec3, vec4 } from "gl-matrix";
+
+export const getRandomPointInSphere = (radius: number) => {
+  const u = Math.random();
+  const v = Math.random();
+  const theta = u * 2.0 * Math.PI;
+  const phi = Math.acos(2.0 * v - 1.0);
+  const r = Math.cbrt(Math.random()) * radius;
+  const sinTheta = Math.sin(theta);
+  const cosTheta = Math.cos(theta);
+  const sinPhi = Math.sin(phi);
+  const cosPhi = Math.cos(phi);
+  const x = r * sinPhi * cosTheta;
+  const y = r * sinPhi * sinTheta;
+  const z = r * cosPhi;
+
+  return vec3.fromValues(x, y, z);
+};
 
 export const getImageLightness = (imageSrc, callback) => {
   const img = document.createElement("img");
@@ -33,7 +50,7 @@ export const getImageLightness = (imageSrc, callback) => {
     }
 
     // loop over array and get brightness
-    for (var i = 0; i < arr.length; i++) {
+    for (let i = 0; i < arr.length; i++) {
       const v = arr[i];
       const brightness = 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
 
@@ -44,7 +61,7 @@ export const getImageLightness = (imageSrc, callback) => {
     let min = 0;
     let max = 0;
 
-    for (var i = 0; i < pixelBrightness.length; i++) {
+    for (let i = 0; i < pixelBrightness.length; i++) {
       if (pixelBrightness[i] < min) min = pixelBrightness[i];
       if (pixelBrightness[i] > max) max = pixelBrightness[i];
     }

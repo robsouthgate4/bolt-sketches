@@ -48,6 +48,7 @@ export default class extends Base {
   sphere: DrawSet;
   irradiance: Texture2D;
   glb: Node;
+  gl: WebGL2RenderingContext;
 
   constructor() {
     super();
@@ -64,6 +65,7 @@ export default class extends Base {
     this.eventListeners.setBoundElement(this.canvas);
 
     this.bolt = Bolt.getInstance();
+
     this.bolt.init(this.canvas, {
       alpha: false,
       premultipliedAlpha: false,
@@ -71,6 +73,9 @@ export default class extends Base {
       dpi: Math.min(2, window.devicePixelRatio),
       powerPreference: "high-performance",
     });
+
+    this.gl = this.bolt.getContext();
+    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 
     this.camera = new CameraPersp({
       aspect: this.canvas.width / this.canvas.height,

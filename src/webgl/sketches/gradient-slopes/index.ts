@@ -85,6 +85,7 @@ export default class extends Base {
     this.bolt = Bolt.getInstance();
     this.bolt.init(this.offscreenCanvas, {
       antialias: true,
+      alpha: true,
       dpi: Math.min(2, window.devicePixelRatio),
       powerPreference: "high-performance",
     });
