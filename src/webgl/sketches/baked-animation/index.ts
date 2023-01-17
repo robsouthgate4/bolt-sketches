@@ -9,20 +9,12 @@ import {
   DrawSet,
   Cube,
   Mesh,
-  Plane,
   Texture2D,
-  RGBA32f,
-  RGBA,
-  FLOAT,
-  NEAREST,
   LINEAR,
   REPEAT,
-  TEXTURE0,
-  TEXTURE_2D,
-  TEXTURE1,
 } from "@bolt-webgl/core";
 
-import { mat4, quat, vec3, vec4 } from "gl-matrix";
+import { mat4, quat, vec3 } from "gl-matrix";
 import config from "./config";
 
 import GLTFLoader from "./libs/gltf-loader";
@@ -96,9 +88,11 @@ export default class extends Base {
     });
 
     this.orbit = new Orbit(this.camera, {
-      zoomSpeed: 0.5,
+      zoomSpeed: 0.1,
       maxRadius: 10,
       minRadius: 2,
+      rotateSpeed: 1,
+      ease: 0.1,
     });
 
     this.bolt.setViewPort(0, 0, this.canvas.width, this.canvas.height);
@@ -204,7 +198,7 @@ export default class extends Base {
     this._cubeDS.transform.quaternion = rotation;
 
     this.bolt.draw(this.scene);
-    this.bolt.draw(this._cubeDS);
+    //this.bolt.draw(this._cubeDS);
   }
 
   lateUpdate(elapsed: number, delta: number) {

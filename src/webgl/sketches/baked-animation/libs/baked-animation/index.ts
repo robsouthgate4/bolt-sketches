@@ -35,6 +35,16 @@ export default class BakedAnimation {
   runAnimation(animationName: string) {
     this._animationTime = 0;
     this._currentAnimation = this._channels[animationName];
+    Object.values(this._currentAnimation).forEach((transformData) => {
+      const translationKeyframe = transformData.translation as KeyFrame[];
+      const rotationKeyframe = transformData.rotation as KeyFrame[];
+      const scaleKeyframe = transformData.scale as KeyFrame[];
+      console.log("-----------------");
+      Object.values(rotationKeyframe).forEach((keyframe) => {
+        console.log(keyframe.transform);
+      });
+      console.log("-----------------");
+    });
     if (this._currentAnimation) {
       this._setMinAndMaxTime();
     }
@@ -80,8 +90,10 @@ export default class BakedAnimation {
 
     if (this._animationTime > this._maxTime) {
       this._animationTime = this._minTime;
+      this._animationTime = this._animationTime % this._maxTime;
     }
 
+    // modulate the animation time by the max time
     Object.values(this._currentAnimation).forEach((transformData) => {
       const translationKeyframe = transformData.translation as KeyFrame[];
       const rotationKeyframe = transformData.rotation as KeyFrame[];
